@@ -67,7 +67,7 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .svgtick2{font-size:12px;fill:var(--muted);opacity:.85}
 .svgnote{font-size:14px;font-weight:650}
 .cinta{display:flex;flex-direction:column;gap:3px}
-.cintafila{display:grid;grid-template-columns:minmax(120px,1.1fr) 3fr auto 62px;gap:10px;align-items:center;background:none;border:0;border-radius:7px;padding:5px 6px;cursor:pointer;text-align:left;font:inherit;width:100%;color:inherit}
+.cintafila{display:grid;grid-template-columns:minmax(120px,1.1fr) 3fr 62px 82px 62px;gap:10px;align-items:center;background:none;border:0;border-radius:7px;padding:6px;cursor:pointer;text-align:left;font:inherit;width:100%;color:inherit}
 .cintafila:hover{background:#F3F5FB}
 .cintanom{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cintapista{position:relative;height:15px;background:#E8EBF2;border-radius:4px;overflow:hidden}
@@ -76,10 +76,10 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .cintabarra.t-medio{background:#8D9AB5}
 .cintabarra.t-bajo{background:#D9A78C}
 .cintaprom{position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--accent);border-radius:2px;box-shadow:0 0 0 1px rgba(138,107,0,.35)}
-.cintaval{font-size:13px;font-weight:650}
+.cintaval{font-size:14px;font-weight:700;text-align:right}
 .cintadif{font-size:12px;text-align:right}
 .podio{list-style:none;padding:0;display:flex;flex-direction:column;gap:4px}
-.podiofila{display:grid;grid-template-columns:22px 1fr auto 62px;gap:10px;align-items:center;width:100%;background:#F5F7FC;border:1px solid var(--line);border-radius:9px;padding:9px 10px;cursor:pointer;font:inherit;text-align:left;color:inherit}
+.podiofila{display:grid;grid-template-columns:22px 1fr auto 78px;gap:10px;align-items:center;width:100%;background:#F5F7FC;border:1px solid var(--line);border-radius:9px;padding:9px 10px;cursor:pointer;font:inherit;text-align:left;color:inherit}
 .podio-bajo .podiofila{background:#FDF6EC;border-color:#EEDCC2}
 .podiopos{font-size:12px;font-weight:700;color:var(--muted);text-align:center}
 .podionom{font-size:13.5px;font-weight:560;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -110,6 +110,34 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .lista li{margin-bottom:5px}
 .vacio{font-size:13px;color:var(--muted);background:#F5F7FC;border:1px dashed var(--line);border-radius:10px;padding:14px;text-align:center}
 .t-alto{color:var(--alto)}.t-bajo{color:var(--bajo)}.t-medio{color:var(--medio)}
+/* barra de metas y KPI doble */
+.metasbarra{font-size:12.5px;color:var(--muted);margin:-4px 0 10px;padding:7px 11px;background:#FFF9DB;border:1px solid #F0DC96;border-radius:9px}
+.metasbarra b{color:var(--ink)}
+.kpicalfila{display:flex;align-items:center;gap:7px;margin-top:9px}
+.kpicallbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:650}
+.chipcal{display:inline-block;font-size:13px;font-weight:700;border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums}
+.chipcal.c-ok{background:#EAF4EE;color:#15563B;border:1px solid #CBE3D6}
+.chipcal.c-no{background:#FDF1E9;color:#8A3C10;border:1px solid #EFD8C6}
+.chipcal.c-nulo{background:#F1F3F7;color:var(--muted);border:1px solid var(--line);font-weight:600}
+
+/* grupos de cumplimiento */
+.grupos{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-bottom:12px}
+.gchip{font:inherit;cursor:pointer;text-align:left;background:#F5F7FC;border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink)}
+.gchip b{display:block;font-size:22px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.gchip span{display:block;font-size:11px;color:var(--muted);margin-top:3px;line-height:1.2}
+.gchip-on{border-color:var(--deep);border-width:2px;background:#fff;box-shadow:var(--sombra)}
+.gchip.g-ambas b{color:var(--alto)}
+.gchip.g-ninguna b{color:var(--bajo)}
+.gchip.g-solo_r b,.gchip.g-solo_c b{color:var(--accent-txt)}
+.ordenbar{margin-bottom:10px}
+
+/* cabecera y columnas de la cinta */
+.cintacab{display:grid;grid-template-columns:minmax(120px,1.1fr) 3fr 62px 82px 62px;gap:10px;padding:0 6px 6px;
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:650;border-bottom:1px solid var(--line);margin-bottom:4px}
+.cintacab .der{text-align:right}
+.cintacal{text-align:right}
+.podiocal{text-align:right}
+
 /* semáforos de meta en los KPI */
 .kpi-ok .kpival{border-bottom-color:var(--alto)}
 .kpi-no .kpival{border-bottom-color:var(--bajo)}
@@ -150,7 +178,9 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 @media (max-width:900px){
   .cargas{grid-template-columns:1fr}
   .kpival{font-size:29px}
-  .cintafila{grid-template-columns:minmax(96px,1fr) 2fr auto 54px;gap:7px}
+  .cintafila,.cintacab{grid-template-columns:minmax(88px,1fr) 1.6fr 54px 70px;gap:7px}
+  .cintafila .cintadif,.cintacab span:last-child{display:none}
+  .grupos{grid-template-columns:repeat(auto-fit,minmax(96px,1fr))}
   .pantalla{padding:10px 11px 34px}
 }
 </style>
@@ -511,37 +541,56 @@ function htmlKpi(eyebrow,valor,unidad,pie,fuerte,semaforo){
     '<div class="kpival">'+valor+(unidad?'<span class="kpiun">'+esc(unidad)+'</span>':"")+'</div>'+
     (pie?'<div class="kpipie">'+pie+'</div>':"")+'</div>';
 }
+function chipCal(cf,meta){
+  if(cf==null) return '<span class="chipcal c-nulo">sin dato</span>';
+  return '<span class="chipcal '+(cf>=meta?"c-ok":"c-no")+'">'+fPct(cf)+'</span>';
+}
+function htmlKpiDoble(eyebrow,r,cf,pie,fuerte){
+  var mR=metaRend(), mC=metaCal();
+  return '<div class="kpi'+(fuerte?" kpi-fuerte":"")+claseMeta(r,mR)+'">'+
+    '<div class="eyebrow">'+esc(eyebrow)+'</div>'+
+    '<div class="kpival">'+fInt(r)+'<span class="kpiun">esq/h</span></div>'+
+    '<div class="kpicalfila"><span class="kpicallbl">Calidad</span>'+chipCal(cf,mC)+'</div>'+
+    (pie?'<div class="kpipie">'+pie+'</div>':"")+'</div>';
+}
+
 function htmlFicha(t,v,tono){
   return '<div class="ficha"><div class="fichat">'+esc(t)+'</div><div class="fichav'+(tono?" t-"+tono:"")+'">'+v+'</div></div>';
 }
-function htmlCinta(filas,prom){
-  var tope=prom||0;
+/* Una fila por persona con las dos cosas a la vez: barra de rendimiento
+   contra la meta y el porcentaje de calidad con su propio semáforo. */
+function htmlCinta(filas){
+  var mR=metaRend(), mC=metaCal();
+  var tope=mR;
   filas.forEach(function(f){ if(f.v>tope) tope=f.v; });
-  tope=Math.max(1,tope)*1.05;
-  var pProm=prom?Math.max(0,Math.min(100,(prom/tope)*100)):null;
-  var s='<div class="cinta">';
+  tope=tope*1.05;
+  var pMeta=Math.max(0,Math.min(100,(mR/tope)*100));
+  var s='<div class="cinta"><div class="cintacab">'+
+    '<span>Colaborador</span><span>Rendimiento contra la meta</span><span class="der">esq/h</span>'+
+    '<span class="der">Calidad</span><span class="der">vs meta</span></div>';
   filas.forEach(function(f){
     var pct=Math.max(0,Math.min(100,((f.v||0)/tope)*100));
-    var dif=prom&&f.v?(f.v/prom-1):null, tono=tonoDif(dif);
+    var dif=f.v?(f.v/mR-1):null, tono=tonoDif(dif);
     s+='<button class="cintafila" data-persona="'+f.k+'">'+
       '<span class="cintanom" title="'+esc(f.nom)+'">'+esc(corto(f.nom))+'</span>'+
       '<span class="cintapista"><span class="cintabarra t-'+tono+'" style="width:'+pct+'%"></span>'+
-      (pProm!=null?'<span class="cintaprom" style="left:'+pProm+'%"></span>':"")+'</span>'+
+      '<span class="cintaprom" style="left:'+pMeta+'%"></span></span>'+
       '<span class="cintaval">'+fInt(f.v)+'</span>'+
+      '<span class="cintacal">'+chipCal(f.cf,mC)+'</span>'+
       '<span class="cintadif t-'+tono+'">'+difTxt(dif)+'</span></button>';
   });
   return s+"</div>";
 }
-function htmlPodio(filas,prom,bajo){
+function htmlPodio(filas,bajo){
   if(!filas.length) return '<div class="vacio">Sin registros ese día.</div>';
+  var mR=metaRend(), mC=metaCal();
   var s='<ol class="podio'+(bajo?" podio-bajo":"")+'">';
   filas.forEach(function(f,i){
-    var dif=prom&&f.v?(f.v/prom-1):null;
     s+='<li><button class="podiofila" data-persona="'+f.k+'">'+
       '<span class="podiopos">'+(i+1)+'</span>'+
       '<span class="podionom">'+esc(corto(f.nom))+'</span>'+
-      '<span class="podioval">'+fInt(f.v)+'<em>esq/h</em></span>'+
-      '<span class="podiodif '+(dif!=null&&dif>=0?"t-alto":"t-bajo")+'">'+difTxt(dif)+'</span></button></li>';
+      '<span class="podioval '+(f.v>=mR?"t-alto":"t-bajo")+'">'+fInt(f.v)+'<em>esq/h</em></span>'+
+      '<span class="podiocal">'+chipCal(f.cf,mC)+'</span></button></li>';
   });
   return s+"</ol>";
 }
@@ -555,7 +604,8 @@ function htmlCab(titulo,sub,botones){
 /* ------------------------------ estado ------------------------------ */
 
 var E={ ds:null, idx:null, sesion:null, periodo:"dia", dRef:null, semFiltro:"", personaSel:null,
-  pestana:"datos", previo:null, mensaje:null, verComo:"", red:"", mostrar:null };
+  pestana:"datos", previo:null, mensaje:null, verComo:"", red:"", mostrar:null,
+  orden:"rend", cump:"todos" };
 
 function setDs(ds){
   E.ds=ds;
@@ -674,29 +724,31 @@ function vistaLider(lider,comoAdmin){
     '</div></div>';
 
   var mR=metaRend(), mC=metaCal();
+  s+='<div class="metasbarra">Metas de la finca: <b>'+fInt(mR)+' esq/h</b> y <b>'+fPct(mC)+' de calidad</b></div>';
   s+='<div class="kpis">'+
-    htmlKpi("Hoy · "+dmy(ref.ms),fInt(kd.r),"esq/h",fInt(kd.esq)+" esquejes · "+f1(kd.hor)+" h · meta "+fInt(mR),true,claseMeta(kd.r,mR))+
-    htmlKpi("Semana "+(semActiva||"—"),fInt(ks.r),"esq/h",fInt(ks.esq)+" esquejes · calidad "+fPct(ks.cf),false,claseMeta(ks.r,mR))+
-    htmlKpi("Calidad de la semana",fPct(ks.cf),"","meta "+fPct(mC)+" · "+(ks.cf!=null&&ks.cf>=mC?"cumple":"por debajo"),false,claseMeta(ks.cf,mC))+
-    htmlKpi("Año · ciclo 20"+ref.ciclo,fInt(ka.r),"esq/h",fInt(ka.esq)+" esquejes · calidad "+fPct(ka.cf),false,claseMeta(ka.r,mR))+
+    htmlKpiDoble("Hoy · "+dmy(ref.ms),kd.r,kd.cf,fInt(kd.esq)+" esquejes · "+f1(kd.hor)+" h",true)+
+    htmlKpiDoble("Semana "+(semActiva||"—"),ks.r,ks.cf,fInt(ks.esq)+" esquejes")+
+    htmlKpiDoble("Mes · "+MESES[ref.mes]+" "+ref.anio,km.r,km.cf,fInt(km.esq)+" esquejes")+
+    htmlKpiDoble("Año · ciclo 20"+ref.ciclo,ka.r,ka.cf,fInt(ka.esq)+" esquejes")+
     '</div>';
 
   /* ranking del día */
   var accD=new Map();
   regsEquipo.forEach(function(r){
     if(r.d!==ref.d||!(r.hor>0)) return;
-    if(!accD.has(r.p)) accD.set(r.p,{esq:0,hor:0});
+    if(!accD.has(r.p)) accD.set(r.p,{esq:0,hor:0,cf:0,ncf:0});
     var a=accD.get(r.p); a.esq+=r.esq; a.hor+=r.hor;
+    if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
   });
   var rankDia=[];
-  accD.forEach(function(a,p){ rankDia.push({k:p,nom:idx.personas[p].nom,v:a.esq/a.hor}); });
+  accD.forEach(function(a,p){ rankDia.push({k:p,nom:idx.personas[p].nom,v:a.esq/a.hor,cf:a.ncf?a.cf/a.ncf:null}); });
   rankDia.sort(function(a,b){ return b.v-a.v; });
 
   s+='<div class="rejilla2"><section class="tarj"><h3 class="tarjtit">Mejores 3 del día'+
-    '<span class="tarjsub">'+dmy(ref.ms)+'</span></h3>'+htmlPodio(rankDia.slice(0,3),kd.r,false)+'</section>'+
+    '<span class="tarjsub">'+dmy(ref.ms)+' · rendimiento y calidad</span></h3>'+htmlPodio(rankDia.slice(0,3),false)+'</section>'+
     '<section class="tarj"><h3 class="tarjtit">Requieren acompañamiento'+
     '<span class="tarjsub">3 más bajos del día</span></h3>'+
-    htmlPodio(rankDia.slice(-3).reverse(),kd.r,true)+'</section></div>';
+    htmlPodio(rankDia.slice(-3).reverse(),true)+'</section></div>';
 
   /* serie del gráfico */
   var serie=[], mapa, claves;
@@ -744,21 +796,49 @@ function vistaLider(lider,comoAdmin){
   var accP=new Map();
   regsEquipo.forEach(function(r){
     if(!fPer(r)||!(r.hor>0)) return;
-    if(!accP.has(r.p)) accP.set(r.p,{esq:0,hor:0});
+    if(!accP.has(r.p)) accP.set(r.p,{esq:0,hor:0,cf:0,ncf:0});
     var a=accP.get(r.p); a.esq+=r.esq; a.hor+=r.hor;
+    if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
   });
-  var filasCinta=[];
+  var todasFilas=[];
   equipo.forEach(function(p){
     var a=accP.get(p.i);
-    if(a&&a.hor>0) filasCinta.push({k:p.i,nom:p.nom,v:a.esq/a.hor});
+    if(a&&a.hor>0) todasFilas.push({ k:p.i, nom:p.nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null });
   });
-  filasCinta.sort(function(a,b){ return b.v-a.v; });
+  var cuenta={ambas:0,solo_r:0,solo_c:0,ninguna:0};
+  todasFilas.forEach(function(f){
+    var okR=f.v>=mR, okC=(f.cf!=null&&f.cf>=mC);
+    if(okR&&okC) cuenta.ambas++;
+    else if(okR) cuenta.solo_r++;
+    else if(okC) cuenta.solo_c++;
+    else cuenta.ninguna++;
+  });
+  var filasCinta=todasFilas.filter(function(f){
+    if(E.cump==="todos") return true;
+    var okR=f.v>=mR, okC=(f.cf!=null&&f.cf>=mC);
+    if(E.cump==="ambas") return okR&&okC;
+    if(E.cump==="solo_r") return okR&&!okC;
+    if(E.cump==="solo_c") return !okR&&okC;
+    return !okR&&!okC;
+  });
+  if(E.orden==="cal") filasCinta.sort(function(a,b){ return (b.cf==null?-1:b.cf)-(a.cf==null?-1:a.cf); });
+  else filasCinta.sort(function(a,b){ return b.v-a.v; });
+
   var promPer=agrega(regsEquipo.filter(fPer)).r;
   var etiqPer={dia:"Día",semana:"Semana",mes:"Mes",anual:"Año"}[E.periodo];
-  s+='<section class="tarj"><h3 class="tarjtit">Cinta de rendimiento · '+etiqPer+
-    '<span class="tarjsub">'+filasCinta.length+' con registros · la línea fucsia es la meta de '+fInt(mR)+
-    ' esq/h · promedio del equipo '+fInt(promPer)+'</span></h3>'+
-    (filasCinta.length?htmlCinta(filasCinta,mR):'<div class="vacio">Sin registros con horas en este período.</div>')+
+  var grupos=[["todos","Todos",todasFilas.length],["ambas","Cumplen las dos",cuenta.ambas],
+    ["solo_r","Solo rendimiento",cuenta.solo_r],["solo_c","Solo calidad",cuenta.solo_c],
+    ["ninguna","Ninguna de las dos",cuenta.ninguna]];
+  s+='<section class="tarj"><h3 class="tarjtit">Rendimiento y calidad de cada persona · '+etiqPer+
+    '<span class="tarjsub">la marca amarilla es la meta de '+fInt(mR)+' esq/h · promedio del equipo '+fInt(promPer)+'</span></h3>'+
+    '<div class="grupos">'+grupos.map(function(g){
+      return '<button class="gchip'+(E.cump===g[0]?" gchip-on":"")+' g-'+g[0]+'" data-cump="'+g[0]+'">'+
+        '<b>'+g[2]+'</b><span>'+g[1]+'</span></button>';
+    }).join("")+'</div>'+
+    '<div class="grupo grupo-wrap ordenbar"><span class="lblmini">Ordenar por</span>'+
+    '<button class="chip'+(E.orden==="rend"?" chip-on":"")+'" data-orden="rend">Rendimiento</button>'+
+    '<button class="chip'+(E.orden==="cal"?" chip-on":"")+'" data-orden="cal">Calidad</button></div>'+
+    (filasCinta.length?htmlCinta(filasCinta):'<div class="vacio">Ninguna persona en este grupo.</div>')+
     '</section>';
 
   return s+"</div>";
@@ -1129,6 +1209,12 @@ function conectar(){
   on("mostrar","click",function(e){ E.mostrar=+e.currentTarget.getAttribute("data-p"); render(); });
   on("cerrarshow","click",function(){ E.mostrar=null; render(); });
 
+  document.querySelectorAll("[data-orden]").forEach(function(b){
+    b.addEventListener("click",function(){ E.orden=b.getAttribute("data-orden"); render(); });
+  });
+  document.querySelectorAll("[data-cump]").forEach(function(b){
+    b.addEventListener("click",function(){ E.cump=b.getAttribute("data-cump"); render(); });
+  });
   document.querySelectorAll("[data-periodo]").forEach(function(b){
     b.addEventListener("click",function(){ E.periodo=b.getAttribute("data-periodo"); render(); });
   });

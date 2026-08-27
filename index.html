@@ -119,6 +119,7 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .inp-per{min-width:150px}
 .sinreg{margin-top:12px;font-size:12.5px;color:var(--muted);background:#F5F7FC;border:1px dashed var(--line);border-radius:9px;padding:9px 11px;line-height:1.5}
 .sinreg b{color:var(--ink)}
+.sinreg.dormidos{background:#FDF6EC;border-color:#EEDCC2;border-style:solid}
 
 /* barra de metas y KPI doble */
 .metasbarra{font-size:12.5px;color:var(--muted);margin:-4px 0 10px;padding:7px 11px;background:#FFF9DB;border:1px solid #F0DC96;border-radius:9px}
@@ -231,6 +232,7 @@ var PINES = {
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
+var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
 var COLS = ["CODIGO","NOMBRE DEL COLABORADOR","SEMANA","TIPO REND","ESQUEJES COSECHADOS","HORAS COSECHADAS","CONFORMIDAD","LIDER 0","EXPERIENCIA","ACTIVO","LABOR","FECHA DE INGRESO PERSONA","FECHA DE INGRESO ESQUEJE"];
 var MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 var DIA_NOMBRE = ["dom","lun","mar","mié","jue","vie","sáb"];
@@ -267,6 +269,10 @@ function asegurarUsuarios(){
 }
 
 function metaRend(){ var m=E.ds&&E.ds.meta?E.ds.meta.metaRend:null; return (m&&m>0)?m:META_REND_DEF; }
+function diasDormido(){
+  var d=(E.ds&&E.ds.meta)?E.ds.meta.diasDormido:null;
+  return (d&&d>0)?d:DIAS_DORMIDO_DEF;
+}
 function metaCal(){ var m=E.ds&&E.ds.meta?E.ds.meta.metaCal:null; return (m&&m>0)?m:META_CAL_DEF; }
 function cumple(v,meta){ return v==null?null:(v>=meta); }
 function claseMeta(v,meta){ var c=cumple(v,meta); return c==null?"":(c?" kpi-ok":" kpi-no"); }
@@ -422,6 +428,7 @@ function indexar(ds){
     for(i=0;i<h.length;i++) if(h[i].sem>semMax) semMax=h[i].sem;
     for(i=0;i<h.length;i++) if(h[i].sem===semMax && (!ult||h[i].d>=ult.d)) ult=h[i];
     per.semUlt=semMax;
+    per.dUlt=ult?ult.d:null;
     if(ult) per.lider=ult.lider;
   });
 
@@ -761,10 +768,13 @@ function vistaLider(lider,comoAdmin){
 
   var botones=(comoAdmin?'<button class="btn btn-sec" id="volveradmin">Volver al panel</button>'
     :'<button class="btn btn-sec" id="actualizar">Actualizar</button><button class="btn btn-sec" id="salir">Salir</button>');
+  var ultB=idx.diasOrd.length?idx.diasOrd[0]:0, umb=diasDormido();
+  var nDorm=equipo.filter(function(p){ return p.dUlt==null||(ultB-p.dUlt)>umb; }).length;
   var sub=esApoyos
     ? (equipo.length+" personas activas en labores distintas a cosecha"+(E.laborFiltro?" · "+E.laborFiltro:"")+
        " · de todos los líderes · datos al "+(diasEquipo.length?dmy(idx.msDe(diasEquipo[0])):"—")+(E.red?" · "+E.red:""))
-    : (equipo.length+" en cosecha"+(excluidos?" · "+excluidos+" en otra labor":"")+
+    : ((equipo.length-nDorm)+" cosechando"+(nDorm?" · "+nDorm+" sin cosechar hace semanas":"")+
+       (excluidos?" · "+excluidos+" en otra labor":"")+
        " · datos al "+(diasEquipo.length?dmy(idx.msDe(diasEquipo[0])):"—")+(E.red?" · "+E.red:""));
   var titulo=esApoyos?"Apoyos":(comoAdmin?("Equipo de "+lider):lider);
   var s='<div class="pantalla">'+htmlCab(titulo,sub,botones);
@@ -841,11 +851,13 @@ function vistaLider(lider,comoAdmin){
     var a=acc.get(r.p); a.esq+=r.esq; a.hor+=r.hor; a.n++;
     if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
   });
-  var todasFilas=[], sinRegistro=[];
+  var ultBase=idx.diasOrd.length?idx.diasOrd[0]:0, umbral=diasDormido();
+  function dormido(p){ return p.dUlt==null||(ultBase-p.dUlt)>umbral; }
+  var todasFilas=[], sinRegistro=[], dormidos=[];
   equipo.forEach(function(p){
     var a=acc.get(p.i);
-    if(a&&a.hor>0) todasFilas.push({ k:p.i, nom:p.nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n });
-    else sinRegistro.push(p);
+    if(a&&a.hor>0){ todasFilas.push({ k:p.i, nom:p.nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n }); return; }
+    if(dormido(p)) dormidos.push(p); else sinRegistro.push(p);
   });
   var cuenta={ambas:0,solo_r:0,solo_c:0,ninguna:0};
   todasFilas.forEach(function(f){
@@ -884,6 +896,10 @@ function vistaLider(lider,comoAdmin){
     (filas.length?htmlCinta(filas,esCal?"cal":"rend"):'<div class="vacio">Ninguna persona en este grupo.</div>')+
     (sinRegistro.length?('<div class="sinreg"><b>'+sinRegistro.length+' sin registro '+etiqPer+':</b> '+
       sinRegistro.map(function(p){ return esc(corto(p.nom)); }).join(" · ")+'</div>'):"")+
+    (dormidos.length?('<div class="sinreg dormidos"><b>'+dormidos.length+' sin cosechar hace más de '+
+      Math.round(umbral/7)+' semanas:</b> '+dormidos.sort(function(a,b){ return (a.dUlt||0)-(b.dUlt||0); }).map(function(p){
+        return esc(corto(p.nom))+" ("+(p.dUlt==null?"sin registros":(ultBase-p.dUlt)+" días)");
+      }).join(" · ")+'. Siguen como LABORANDO en el maestro. Revisa si ya salieron o cambiaron de labor.</div>'):"")+
     '</section>';
 
   /* --- gráfico del equipo --- */
@@ -1271,6 +1287,8 @@ function vistaAdmin(){
       '<input class="inp inp-mini" id="metar" type="number" min="1" value="'+metaRend()+'">'+
       '<label class="lblmini" for="metac">calidad %</label>'+
       '<input class="inp inp-mini" id="metac" type="number" min="1" max="100" step="0.5" value="'+(metaCal()*100)+'">'+
+      '<label class="lblmini" for="metad">días sin cosechar</label>'+
+      '<input class="inp inp-mini" id="metad" type="number" min="7" max="180" step="7" value="'+diasDormido()+'">'+
       '<button class="btn btn-mini" id="guardarmetas">Guardar</button></div>'+
       '<p class="nota">Se guardan dentro de datos.json y viajan al sitio con la próxima subida.</p>'+
       '<div class="eyebrow">Estado</div><p class="nota">Guardado: <b>'+esc(almacen.modo)+'</b><br>Última actualización: <b>'+
@@ -1309,6 +1327,13 @@ function vistaAdmin(){
       if(sinCf) al.push(fInt(sinCf)+" registros sin conformidad.");
       var atip=idx.regs.filter(function(r){ return r.r!=null&&(r.r>3000||r.r<100); }).length;
       if(atip) al.push(fInt(atip)+" registros con rendimiento atípico (bajo 100 o sobre 3.000 esq/h).");
+      var ultA=idx.diasOrd.length?idx.diasOrd[0]:0, umbA=diasDormido();
+      var dorm=idx.personas.filter(function(p){
+        return p.activo&&p.cosecha&&(p.dUlt==null||(ultA-p.dUlt)>umbA);
+      });
+      if(dorm.length) al.push(fInt(dorm.length)+" personas con labor COSECHA y estado LABORANDO que no cosechan hace más de "+
+        Math.round(umbA/7)+" semanas: "+dorm.map(function(p){ return corto(p.nom)+" ("+(ultA-p.dUlt)+" días, líder "+corto(p.lider)+")"; }).join("; ")+
+        ". Verifica en el maestro si ya salieron o cambiaron de labor.");
       var noCos=idx.personas.filter(function(p){ return p.activo&&!p.cosecha; }).length;
       if(noCos) al.push(fInt(noCos)+" personas activas con labor distinta a cosecha de esquejes: no salen en los tableros, pero su histórico se conserva.");
       var fuera=idx.lideres.filter(function(l){
@@ -1591,11 +1616,15 @@ function conectar(){
   on("guardarmetas","click",function(){
     if(!E.ds) return;
     var r=+document.getElementById("metar").value, c=+document.getElementById("metac").value;
+    var dd=+document.getElementById("metad").value;
     if(!(r>0)||!(c>0&&c<=100)){ alert("Revisa las metas: rendimiento en esquejes por hora y calidad en porcentaje."); return; }
+    if(!(dd>=7&&dd<=180)){ alert("Los días sin cosechar deben estar entre 7 y 180."); return; }
     E.ds.meta.metaRend=Math.round(r);
     E.ds.meta.metaCal=c/100;
+    E.ds.meta.diasDormido=Math.round(dd);
     var g=guardar(E.ds);
-    E.mensaje={tipo:"ok",txt:"Metas guardadas: "+fInt(r)+" esq/h y "+nf1.format(c)+"% de calidad. Sube datos.json para que los líderes las vean."+(g.ok?"":" No se pudo guardar localmente.")};
+    E.mensaje={tipo:"ok",txt:"Guardado: meta "+fInt(r)+" esq/h, calidad "+nf1.format(c)+"%, y "+Math.round(dd)+
+      " días para marcar a alguien como sin cosechar. Sube datos.json para que los líderes lo vean."+(g.ok?"":" No se pudo guardar localmente.")};
     render();
   });
   on("exphtml","click",exportarTablero);

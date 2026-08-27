@@ -110,6 +110,15 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .lista li{margin-bottom:5px}
 .vacio{font-size:13px;color:var(--muted);background:#F5F7FC;border:1px dashed var(--line);border-radius:10px;padding:14px;text-align:center}
 .t-alto{color:var(--alto)}.t-bajo{color:var(--bajo)}.t-medio{color:var(--medio)}
+/* pestañas Rendimiento / Calidad */
+.pestanas{display:flex;gap:0;margin-bottom:14px;background:#E7EAF2;border-radius:11px;padding:4px}
+.pest{flex:1;font:inherit;font-size:15px;font-weight:700;padding:11px 8px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
+.pest-on{background:var(--deep);color:#fff;box-shadow:0 1px 3px rgba(31,51,97,.3)}
+.tarj-tenue{background:#FAFBFD}
+.inp-per{min-width:150px}
+.sinreg{margin-top:12px;font-size:12.5px;color:var(--muted);background:#F5F7FC;border:1px dashed var(--line);border-radius:9px;padding:9px 11px;line-height:1.5}
+.sinreg b{color:var(--ink)}
+
 /* barra de metas y KPI doble */
 .metasbarra{font-size:12.5px;color:var(--muted);margin:-4px 0 10px;padding:7px 11px;background:#FFF9DB;border:1px solid #F0DC96;border-radius:9px}
 .metasbarra b{color:var(--ink)}
@@ -277,8 +286,8 @@ function f1(n){ return (n==null||!isFinite(n))?"—":nf1.format(n); }
 function fPct(n){ return (n==null||!isFinite(n))?"—":nf1.format(n*100)+"%"; }
 function corto(nombre){
   var p=String(nombre).split(" ").filter(Boolean);
-  if(p.length<=2) return nombre;
-  return p[p.length-2]+" "+p[p.length-1]+" "+p[0].charAt(0)+".";
+  if(p.length<=3) return p.join(" ");
+  return p[0]+" "+p[1]+" "+p[2]; // dos apellidos y el primer nombre
 }
 function difTxt(d){ return d==null?"—":((d>=0?"+":"")+nf1.format(d*100)+"%"); }
 function tonoDif(d){ return d==null?"medio":(d>=0.05?"alto":(d>=-0.05?"medio":"bajo")); }
@@ -510,6 +519,7 @@ function parsearTexto(texto){
 function svgBarras(datos,opc){
   opc=opc||{};
   var w=1000, alto=300, refL=opc.refLinea||0, etiq=opc.etiquetaRef||"prom. equipo";
+  var colBarra=opc.color||"var(--deep)";
   var maxV=refL;
   datos.forEach(function(d){ if(d.v&&d.v>maxV) maxV=d.v; });
   maxV=Math.max(1,maxV)*1.14;
@@ -527,7 +537,7 @@ function svgBarras(datos,opc){
   }
   datos.forEach(function(d,i){
     var x=gap*bw+i*(bw+gap*bw), h=Math.max(d.v?2:0, base-y(d.v));
-    s+='<rect x="'+x+'" y="'+y(d.v)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+(d.hl?"var(--accent)":"var(--deep)")+'"'+
+    s+='<rect x="'+x+'" y="'+y(d.v)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+(d.hl?"var(--accent)":colBarra)+'"'+
       (d.hl?' stroke="var(--deep)" stroke-width="1.5"':'')+' opacity="'+(d.v?0.92:0.14)+'"/>';
     if(n<=16&&d.v) s+='<text x="'+(x+bw/2)+'" y="'+(y(d.v)-7)+'" text-anchor="middle" class="svgval">'+fInt(d.v)+'</text>';
     if(n<=34) s+='<text x="'+(x+bw/2)+'" y="'+(base+17)+'" text-anchor="middle" class="svgtick">'+esc(d.label)+'</text>';
@@ -545,12 +555,16 @@ function chipCal(cf,meta){
   if(cf==null) return '<span class="chipcal c-nulo">sin dato</span>';
   return '<span class="chipcal '+(cf>=meta?"c-ok":"c-no")+'">'+fPct(cf)+'</span>';
 }
-function htmlKpiDoble(eyebrow,r,cf,pie,fuerte){
+function htmlKpiDoble(eyebrow,r,cf,pie,fuerte,esCal){
   var mR=metaRend(), mC=metaCal();
-  return '<div class="kpi'+(fuerte?" kpi-fuerte":"")+claseMeta(r,mR)+'">'+
-    '<div class="eyebrow">'+esc(eyebrow)+'</div>'+
-    '<div class="kpival">'+fInt(r)+'<span class="kpiun">esq/h</span></div>'+
-    '<div class="kpicalfila"><span class="kpicallbl">Calidad</span>'+chipCal(cf,mC)+'</div>'+
+  var grande = esCal
+    ? ('<div class="kpival">'+fPct(cf)+'<span class="kpiun">calidad</span></div>'+
+       '<div class="kpicalfila"><span class="kpicallbl">Rendimiento</span>'+
+       '<span class="chipcal '+(r!=null&&r>=mR?"c-ok":"c-no")+'">'+fInt(r)+' esq/h</span></div>')
+    : ('<div class="kpival">'+fInt(r)+'<span class="kpiun">esq/h</span></div>'+
+       '<div class="kpicalfila"><span class="kpicallbl">Calidad</span>'+chipCal(cf,mC)+'</div>');
+  return '<div class="kpi'+(fuerte?" kpi-fuerte":"")+claseMeta(esCal?cf:r,esCal?mC:mR)+'">'+
+    '<div class="eyebrow">'+esc(eyebrow)+'</div>'+grande+
     (pie?'<div class="kpipie">'+pie+'</div>':"")+'</div>';
 }
 
@@ -559,38 +573,48 @@ function htmlFicha(t,v,tono){
 }
 /* Una fila por persona con las dos cosas a la vez: barra de rendimiento
    contra la meta y el porcentaje de calidad con su propio semáforo. */
-function htmlCinta(filas){
-  var mR=metaRend(), mC=metaCal();
-  var tope=mR;
-  filas.forEach(function(f){ if(f.v>tope) tope=f.v; });
-  tope=tope*1.05;
-  var pMeta=Math.max(0,Math.min(100,(mR/tope)*100));
+/* Una fila por persona. En modo "rend" la barra es el rendimiento contra la meta
+   y la calidad va en pastilla; en modo "cal" es al contrario. */
+function htmlCinta(filas,modo){
+  var mR=metaRend(), mC=metaCal(), esCal=(modo==="cal");
+  var tope;
+  if(esCal){ tope=100; }
+  else { tope=mR; filas.forEach(function(f){ if(f.v>tope) tope=f.v; }); tope=tope*1.05; }
+  var pMeta=Math.max(0,Math.min(100,((esCal?mC*100:mR)/tope)*100));
   var s='<div class="cinta"><div class="cintacab">'+
-    '<span>Colaborador</span><span>Rendimiento contra la meta</span><span class="der">esq/h</span>'+
-    '<span class="der">Calidad</span><span class="der">vs meta</span></div>';
+    '<span>Colaborador</span><span>'+(esCal?"Calidad contra la meta":"Rendimiento contra la meta")+'</span>'+
+    '<span class="der">'+(esCal?"Calidad":"esq/h")+'</span>'+
+    '<span class="der">'+(esCal?"esq/h":"Calidad")+'</span><span class="der">vs meta</span></div>';
   filas.forEach(function(f){
-    var pct=Math.max(0,Math.min(100,((f.v||0)/tope)*100));
-    var dif=f.v?(f.v/mR-1):null, tono=tonoDif(dif);
+    var base=esCal?(f.cf==null?null:f.cf*100):f.v;
+    var meta=esCal?mC*100:mR;
+    var pct=Math.max(0,Math.min(100,((base||0)/tope)*100));
+    var dif=base?(base/meta-1):null, tono=tonoDif(dif);
     s+='<button class="cintafila" data-persona="'+f.k+'">'+
       '<span class="cintanom" title="'+esc(f.nom)+'">'+esc(corto(f.nom))+'</span>'+
       '<span class="cintapista"><span class="cintabarra t-'+tono+'" style="width:'+pct+'%"></span>'+
       '<span class="cintaprom" style="left:'+pMeta+'%"></span></span>'+
-      '<span class="cintaval">'+fInt(f.v)+'</span>'+
-      '<span class="cintacal">'+chipCal(f.cf,mC)+'</span>'+
+      '<span class="cintaval">'+(esCal?fPct(f.cf):fInt(f.v))+'</span>'+
+      '<span class="cintacal">'+(esCal
+        ? '<span class="chipcal '+(f.v>=mR?"c-ok":"c-no")+'">'+fInt(f.v)+'</span>'
+        : chipCal(f.cf,mC))+'</span>'+
       '<span class="cintadif t-'+tono+'">'+difTxt(dif)+'</span></button>';
   });
   return s+"</div>";
 }
-function htmlPodio(filas,bajo){
+function htmlPodio(filas,bajo,esCal){
   if(!filas.length) return '<div class="vacio">Sin registros ese día.</div>';
   var mR=metaRend(), mC=metaCal();
   var s='<ol class="podio'+(bajo?" podio-bajo":"")+'">';
   filas.forEach(function(f,i){
+    var grande = esCal
+      ? ('<span class="podioval '+(f.cf!=null&&f.cf>=mC?"t-alto":"t-bajo")+'">'+fPct(f.cf)+'<em>calidad</em></span>'+
+         '<span class="podiocal"><span class="chipcal '+(f.v>=mR?"c-ok":"c-no")+'">'+fInt(f.v)+'</span></span>')
+      : ('<span class="podioval '+(f.v>=mR?"t-alto":"t-bajo")+'">'+fInt(f.v)+'<em>esq/h</em></span>'+
+         '<span class="podiocal">'+chipCal(f.cf,mC)+'</span>');
     s+='<li><button class="podiofila" data-persona="'+f.k+'">'+
       '<span class="podiopos">'+(i+1)+'</span>'+
-      '<span class="podionom">'+esc(corto(f.nom))+'</span>'+
-      '<span class="podioval '+(f.v>=mR?"t-alto":"t-bajo")+'">'+fInt(f.v)+'<em>esq/h</em></span>'+
-      '<span class="podiocal">'+chipCal(f.cf,mC)+'</span></button></li>';
+      '<span class="podionom">'+esc(corto(f.nom))+'</span>'+grande+'</button></li>';
   });
   return s+"</ol>";
 }
@@ -605,7 +629,7 @@ function htmlCab(titulo,sub,botones){
 
 var E={ ds:null, idx:null, sesion:null, periodo:"dia", dRef:null, semFiltro:"", personaSel:null,
   pestana:"datos", previo:null, mensaje:null, verComo:"", red:"", mostrar:null,
-  orden:"rend", cump:"todos" };
+  vista:"rend", orden:"apellido", cump:"todos", detPeriodo:"dia", detClave:null };
 
 function setDs(ds){
   E.ds=ds;
@@ -669,41 +693,41 @@ function refDe(idx,regs,dRef){
 function vistaLider(lider,comoAdmin){
   var idx=E.idx;
   if(idx&&E.mostrar!=null) return vistaCosechador(idx.personas[E.mostrar]);
-  if(!idx) return '<div class="pantalla">'+htmlCab("Sin datos","Este archivo no trae la base cargada",'<button class="btn btn-sec" id="salir">Salir</button>')+
-    '<div class="vacio">Pide a Yuber el archivo del día.</div></div>';
+  if(!idx) return '<div class="pantalla">'+htmlCab("Sin datos","Este tablero no trae la base cargada",
+    '<button class="btn btn-sec" id="salir">Salir</button>')+
+    '<div class="vacio">Pide a Yuber que publique los datos del día.</div></div>';
 
   var todos=idx.equipos.get(lider)||[];
   var equipo=todos.filter(function(p){ return p.activo&&p.cosecha; });
   var excluidos=todos.filter(function(p){ return p.activo&&!p.cosecha; }).length;
 
   var regsEquipo=[];
-  equipo.forEach(function(p){ var h=idx.porPersona.get(p.i); if(h) regsEquipo=regsEquipo.concat(h); });
-  var diasSet=new Set(regsEquipo.map(function(r){ return r.d; }));
-  var diasEquipo=Array.from(diasSet).sort(function(a,b){ return b-a; });
+  equipo.forEach(function(p){ var hh=idx.porPersona.get(p.i); if(hh) regsEquipo=regsEquipo.concat(hh); });
+  var diasEquipo=Array.from(new Set(regsEquipo.map(function(r){ return r.d; }))).sort(function(a,b){ return b-a; });
   var dRef=E.dRef!=null?E.dRef:(diasEquipo.length?diasEquipo[0]:0);
   var ref=refDe(idx,regsEquipo,dRef);
   var semActiva=E.semFiltro?+E.semFiltro:ref.sem;
+  var mR=metaRend(), mC=metaCal();
+  var esCal=(E.vista==="cal");
 
   var botones=(comoAdmin?'<button class="btn btn-sec" id="volveradmin">Volver al panel</button>'
     :'<button class="btn btn-sec" id="actualizar">Actualizar</button><button class="btn btn-sec" id="salir">Salir</button>');
-  var sub=equipo.length+" en cosecha de esquejes"+(excluidos?" · "+excluidos+" activos en otra labor, ocultos":"")+
+  var sub=equipo.length+" en cosecha de esquejes"+(excluidos?" · "+excluidos+" en otra labor":"")+
     " · datos al "+(diasEquipo.length?dmy(idx.msDe(diasEquipo[0])):"—")+(E.red?" · "+E.red:"");
   var s='<div class="pantalla">'+htmlCab(comoAdmin?("Equipo de "+lider):lider,sub,botones);
 
-  /* --- pantalla para mostrar a la persona --- */
-  if(E.mostrar!=null) return vistaCosechador(idx.personas[E.mostrar]);
-
   /* --- detalle de una persona --- */
   if(E.personaSel!=null){
-    s+=vistaDetalle(idx.personas[E.personaSel],regsEquipo);
+    s+=vistaDetalle(idx.personas[E.personaSel],regsEquipo,equipo);
     return s+"</div>";
   }
 
-  var kd=agrega(regsEquipo.filter(filtroPeriodo("dia",ref)));
-  var ks=agrega(regsEquipo.filter(function(r){ return r.sem===semActiva; }));
-  var km=agrega(regsEquipo.filter(filtroPeriodo("mes",ref)));
-  var ka=agrega(regsEquipo.filter(filtroPeriodo("anual",ref)));
+  /* --- pestañas Rendimiento / Calidad --- */
+  s+='<div class="pestanas">'+
+    '<button class="pest'+(esCal?"":" pest-on")+'" data-vista="rend">Rendimiento</button>'+
+    '<button class="pest'+(esCal?" pest-on":"")+'" data-vista="cal">Calidad</button></div>';
 
+  /* --- filtros --- */
   var chips=[["dia","Diario"],["semana","Semanal"],["mes","Mensual"],["anual","Anual"]].map(function(x){
     return '<button class="chip'+(E.periodo===x[0]?" chip-on":"")+'" data-periodo="'+x[0]+'">'+x[1]+'</button>';
   }).join("");
@@ -713,26 +737,115 @@ function vistaLider(lider,comoAdmin){
   var optSem='<option value="">Semana del día ('+(ref.sem||"—")+')</option>'+idx.semOrd.map(function(x){
     return '<option value="'+x+'"'+(String(x)===String(E.semFiltro)?" selected":"")+'>'+x+'</option>';
   }).join("");
-  var optPer='<option value="">Ver equipo completo</option>'+equipo.map(function(p){
+  var optPer='<option value="">Ver todo el equipo</option>'+equipo.map(function(p){
     return '<option value="'+p.i+'">'+esc(p.nom)+'</option>';
   }).join("");
-
   s+='<div class="barrafiltros"><div class="grupo">'+chips+'</div><div class="grupo">'+
     '<label class="lblmini" for="fdia">Día</label><select id="fdia" class="inp inp-mini">'+optDias+'</select>'+
     '<label class="lblmini" for="fsem">Semana</label><select id="fsem" class="inp inp-mini">'+optSem+'</select>'+
-    '<label class="lblmini" for="fper">Colaborador</label><select id="fper" class="inp inp-mini">'+optPer+'</select>'+
+    '<label class="lblmini" for="fper">Persona</label><select id="fper" class="inp inp-mini inp-per">'+optPer+'</select>'+
     '</div></div>';
 
-  var mR=metaRend(), mC=metaCal();
+  var kd=agrega(regsEquipo.filter(filtroPeriodo("dia",ref)));
+  var ks=agrega(regsEquipo.filter(function(r){ return r.sem===semActiva; }));
+  var km=agrega(regsEquipo.filter(filtroPeriodo("mes",ref)));
+  var ka=agrega(regsEquipo.filter(filtroPeriodo("anual",ref)));
+
   s+='<div class="metasbarra">Metas de la finca: <b>'+fInt(mR)+' esq/h</b> y <b>'+fPct(mC)+' de calidad</b></div>';
   s+='<div class="kpis">'+
-    htmlKpiDoble("Hoy · "+dmy(ref.ms),kd.r,kd.cf,fInt(kd.esq)+" esquejes · "+f1(kd.hor)+" h",true)+
-    htmlKpiDoble("Semana "+(semActiva||"—"),ks.r,ks.cf,fInt(ks.esq)+" esquejes")+
-    htmlKpiDoble("Mes · "+MESES[ref.mes]+" "+ref.anio,km.r,km.cf,fInt(km.esq)+" esquejes")+
-    htmlKpiDoble("Año · ciclo 20"+ref.ciclo,ka.r,ka.cf,fInt(ka.esq)+" esquejes")+
+    htmlKpiDoble("Hoy · "+dmy(ref.ms),kd.r,kd.cf,fInt(kd.esq)+" esquejes · "+f1(kd.hor)+" h",true,esCal)+
+    htmlKpiDoble("Semana "+(semActiva||"—"),ks.r,ks.cf,fInt(ks.esq)+" esquejes",false,esCal)+
+    htmlKpiDoble("Mes · "+MESES[ref.mes]+" "+ref.anio,km.r,km.cf,fInt(km.esq)+" esquejes",false,esCal)+
+    htmlKpiDoble("Año · ciclo 20"+ref.ciclo,ka.r,ka.cf,fInt(ka.esq)+" esquejes",false,esCal)+
     '</div>';
 
-  /* ranking del día */
+  /* --- una fila por persona en el período elegido --- */
+  var fPer=filtroPeriodo(E.periodo,{d:ref.d,sem:semActiva,anio:ref.anio,mes:ref.mes,ciclo:ref.ciclo});
+  var acc=new Map();
+  regsEquipo.forEach(function(r){
+    if(!fPer(r)||!(r.hor>0)) return;
+    if(!acc.has(r.p)) acc.set(r.p,{esq:0,hor:0,cf:0,ncf:0,n:0});
+    var a=acc.get(r.p); a.esq+=r.esq; a.hor+=r.hor; a.n++;
+    if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
+  });
+  var todasFilas=[], sinRegistro=[];
+  equipo.forEach(function(p){
+    var a=acc.get(p.i);
+    if(a&&a.hor>0) todasFilas.push({ k:p.i, nom:p.nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n });
+    else sinRegistro.push(p);
+  });
+  var cuenta={ambas:0,solo_r:0,solo_c:0,ninguna:0};
+  todasFilas.forEach(function(f){
+    var okR=f.v>=mR, okC=(f.cf!=null&&f.cf>=mC);
+    if(okR&&okC) cuenta.ambas++; else if(okR) cuenta.solo_r++; else if(okC) cuenta.solo_c++; else cuenta.ninguna++;
+  });
+  var filas=todasFilas.filter(function(f){
+    if(E.cump==="todos") return true;
+    var okR=f.v>=mR, okC=(f.cf!=null&&f.cf>=mC);
+    if(E.cump==="ambas") return okR&&okC;
+    if(E.cump==="solo_r") return okR&&!okC;
+    if(E.cump==="solo_c") return !okR&&okC;
+    return !okR&&!okC;
+  });
+  if(E.orden==="rend") filas.sort(function(a,b){ return b.v-a.v; });
+  else if(E.orden==="cal") filas.sort(function(a,b){ return (b.cf==null?-1:b.cf)-(a.cf==null?-1:a.cf); });
+  else filas.sort(function(a,b){ return a.nom.localeCompare(b.nom,"es"); });
+
+  var etiqPer={dia:"del día",semana:"de la semana",mes:"del mes",anual:"del año"}[E.periodo];
+  var grupos=[["todos","Todos",todasFilas.length],["ambas","Cumplen las dos",cuenta.ambas],
+    ["solo_r","Solo rendimiento",cuenta.solo_r],["solo_c","Solo calidad",cuenta.solo_c],
+    ["ninguna","Ninguna de las dos",cuenta.ninguna]];
+
+  s+='<section class="tarj"><h3 class="tarjtit">'+(esCal?"Calidad":"Rendimiento")+' de cada persona '+etiqPer+
+    '<span class="tarjsub">'+(esCal?("la marca amarilla es la meta de "+fPct(mC)):("la marca amarilla es la meta de "+fInt(mR)+" esq/h"))+
+    ' · orden alfabético por apellido</span></h3>'+
+    '<div class="grupos">'+grupos.map(function(g){
+      return '<button class="gchip'+(E.cump===g[0]?" gchip-on":"")+' g-'+g[0]+'" data-cump="'+g[0]+'">'+
+        '<b>'+g[2]+'</b><span>'+g[1]+'</span></button>';
+    }).join("")+'</div>'+
+    '<div class="grupo grupo-wrap ordenbar"><span class="lblmini">Ordenar por</span>'+
+    '<button class="chip'+(E.orden==="apellido"?" chip-on":"")+'" data-orden="apellido">Apellido</button>'+
+    '<button class="chip'+(E.orden==="rend"?" chip-on":"")+'" data-orden="rend">Rendimiento</button>'+
+    '<button class="chip'+(E.orden==="cal"?" chip-on":"")+'" data-orden="cal">Calidad</button></div>'+
+    (filas.length?htmlCinta(filas,esCal?"cal":"rend"):'<div class="vacio">Ninguna persona en este grupo.</div>')+
+    (sinRegistro.length?('<div class="sinreg"><b>'+sinRegistro.length+' sin registro '+etiqPer+':</b> '+
+      sinRegistro.map(function(p){ return esc(corto(p.nom)); }).join(" · ")+'</div>'):"")+
+    '</section>';
+
+  /* --- gráfico del equipo --- */
+  var mapa=new Map(), claves, serie;
+  function acumula(clave,r){ if(!mapa.has(clave)) mapa.set(clave,[]); mapa.get(clave).push(r); }
+  if(E.periodo==="dia"||E.periodo==="semana"){
+    regsEquipo.forEach(function(r){ if(r.sem===semActiva) acumula(r.d,r); });
+    claves=Array.from(mapa.keys()).sort(function(a,b){ return a-b; });
+    serie=claves.map(function(d){
+      var ag=agrega(mapa.get(d)), ms=idx.msDe(d);
+      return { k:d, label:DIA_NOMBRE[new Date(ms).getUTCDay()], sub:dm(ms),
+        v:esCal?(ag.cf==null?null:ag.cf*100):ag.r, hl:d===ref.d };
+    });
+  } else if(E.periodo==="mes"){
+    regsEquipo.forEach(function(r){ if(r.anio===ref.anio&&r.mes===ref.mes) acumula(r.sem,r); });
+    claves=Array.from(mapa.keys()).sort(function(a,b){ return a-b; });
+    serie=claves.map(function(x){
+      var ag=agrega(mapa.get(x));
+      return { k:x, label:"S"+String(x).slice(2), v:esCal?(ag.cf==null?null:ag.cf*100):ag.r, hl:x===semActiva };
+    });
+  } else {
+    regsEquipo.forEach(function(r){ if(r.ciclo===ref.ciclo) acumula(r.anio*12+r.mes,r); });
+    claves=Array.from(mapa.keys()).sort(function(a,b){ return a-b; });
+    serie=claves.map(function(x){
+      var ag=agrega(mapa.get(x));
+      return { k:x, label:MESES[x%12], v:esCal?(ag.cf==null?null:ag.cf*100):ag.r, hl:x===ref.anio*12+ref.mes };
+    });
+  }
+  var tituloChart=(E.periodo==="dia"||E.periodo==="semana")?("Día por día · semana "+semActiva)
+    :(E.periodo==="mes"?("Semana por semana · "+MESES[ref.mes]+" "+ref.anio):("Mes por mes · ciclo 20"+ref.ciclo));
+  s+='<section class="tarj"><h3 class="tarjtit">'+esc(tituloChart)+
+    '<span class="tarjsub">'+(esCal?"calidad promedio del equipo, %":"promedio del equipo, esquejes por hora")+'</span></h3>'+
+    svgBarras(serie,{ refLinea:esCal?mC*100:mR, etiquetaRef:"meta",
+      refLinea2:esCal?(ka.cf?ka.cf*100:null):ka.r, etiquetaRef2:"prom. equipo" })+'</section>';
+
+  /* --- podios, al final para no estorbar en el informe --- */
   var accD=new Map();
   regsEquipo.forEach(function(r){
     if(r.d!==ref.d||!(r.hor>0)) return;
@@ -741,207 +854,180 @@ function vistaLider(lider,comoAdmin){
     if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
   });
   var rankDia=[];
-  accD.forEach(function(a,p){ rankDia.push({k:p,nom:idx.personas[p].nom,v:a.esq/a.hor,cf:a.ncf?a.cf/a.ncf:null}); });
-  rankDia.sort(function(a,b){ return b.v-a.v; });
-
-  s+='<div class="rejilla2"><section class="tarj"><h3 class="tarjtit">Mejores 3 del día'+
-    '<span class="tarjsub">'+dmy(ref.ms)+' · rendimiento y calidad</span></h3>'+htmlPodio(rankDia.slice(0,3),false)+'</section>'+
-    '<section class="tarj"><h3 class="tarjtit">Requieren acompañamiento'+
-    '<span class="tarjsub">3 más bajos del día</span></h3>'+
-    htmlPodio(rankDia.slice(-3).reverse(),true)+'</section></div>';
-
-  /* serie del gráfico */
-  var serie=[], mapa, claves;
-  if(E.periodo==="dia"||E.periodo==="semana"){
-    mapa=new Map();
-    regsEquipo.forEach(function(r){
-      if(r.sem!==semActiva) return;
-      if(!mapa.has(r.d)) mapa.set(r.d,[]);
-      mapa.get(r.d).push(r);
-    });
-    claves=Array.from(mapa.keys()).sort(function(a,b){ return a-b; });
-    serie=claves.map(function(d){
-      var ms=idx.msDe(d);
-      return { k:d, label:DIA_NOMBRE[new Date(ms).getUTCDay()], sub:dm(ms), v:agrega(mapa.get(d)).r, hl:d===ref.d };
-    });
-  } else if(E.periodo==="mes"){
-    mapa=new Map();
-    regsEquipo.forEach(function(r){
-      if(r.anio!==ref.anio||r.mes!==ref.mes) return;
-      if(!mapa.has(r.sem)) mapa.set(r.sem,[]);
-      mapa.get(r.sem).push(r);
-    });
-    claves=Array.from(mapa.keys()).sort(function(a,b){ return a-b; });
-    serie=claves.map(function(x){ return { k:x, label:"S"+String(x).slice(2), v:agrega(mapa.get(x)).r, hl:x===semActiva }; });
-  } else {
-    mapa=new Map();
-    regsEquipo.forEach(function(r){
-      if(r.ciclo!==ref.ciclo) return;
-      var key=r.anio*12+r.mes;
-      if(!mapa.has(key)) mapa.set(key,[]);
-      mapa.get(key).push(r);
-    });
-    claves=Array.from(mapa.keys()).sort(function(a,b){ return a-b; });
-    serie=claves.map(function(x){ return { k:x, label:MESES[x%12], v:agrega(mapa.get(x)).r, hl:x===ref.anio*12+ref.mes }; });
-  }
-  var tituloChart=(E.periodo==="dia"||E.periodo==="semana")?("Rendimiento diario · semana "+semActiva)
-    :(E.periodo==="mes"?("Rendimiento por semana · "+MESES[ref.mes]+" "+ref.anio)
-    :("Rendimiento por mes · ciclo 20"+ref.ciclo));
-  s+='<section class="tarj"><h3 class="tarjtit">'+esc(tituloChart)+
-    '<span class="tarjsub">promedio del equipo, esquejes por hora</span></h3>'+
-    svgBarras(serie,{refLinea:mR,etiquetaRef:"meta",refLinea2:ka.r,etiquetaRef2:"prom. equipo"})+'</section>';
-
-  /* cinta del período */
-  var fPer=filtroPeriodo(E.periodo,{d:ref.d,sem:semActiva,anio:ref.anio,mes:ref.mes,ciclo:ref.ciclo});
-  var accP=new Map();
-  regsEquipo.forEach(function(r){
-    if(!fPer(r)||!(r.hor>0)) return;
-    if(!accP.has(r.p)) accP.set(r.p,{esq:0,hor:0,cf:0,ncf:0});
-    var a=accP.get(r.p); a.esq+=r.esq; a.hor+=r.hor;
-    if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
-  });
-  var todasFilas=[];
-  equipo.forEach(function(p){
-    var a=accP.get(p.i);
-    if(a&&a.hor>0) todasFilas.push({ k:p.i, nom:p.nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null });
-  });
-  var cuenta={ambas:0,solo_r:0,solo_c:0,ninguna:0};
-  todasFilas.forEach(function(f){
-    var okR=f.v>=mR, okC=(f.cf!=null&&f.cf>=mC);
-    if(okR&&okC) cuenta.ambas++;
-    else if(okR) cuenta.solo_r++;
-    else if(okC) cuenta.solo_c++;
-    else cuenta.ninguna++;
-  });
-  var filasCinta=todasFilas.filter(function(f){
-    if(E.cump==="todos") return true;
-    var okR=f.v>=mR, okC=(f.cf!=null&&f.cf>=mC);
-    if(E.cump==="ambas") return okR&&okC;
-    if(E.cump==="solo_r") return okR&&!okC;
-    if(E.cump==="solo_c") return !okR&&okC;
-    return !okR&&!okC;
-  });
-  if(E.orden==="cal") filasCinta.sort(function(a,b){ return (b.cf==null?-1:b.cf)-(a.cf==null?-1:a.cf); });
-  else filasCinta.sort(function(a,b){ return b.v-a.v; });
-
-  var promPer=agrega(regsEquipo.filter(fPer)).r;
-  var etiqPer={dia:"Día",semana:"Semana",mes:"Mes",anual:"Año"}[E.periodo];
-  var grupos=[["todos","Todos",todasFilas.length],["ambas","Cumplen las dos",cuenta.ambas],
-    ["solo_r","Solo rendimiento",cuenta.solo_r],["solo_c","Solo calidad",cuenta.solo_c],
-    ["ninguna","Ninguna de las dos",cuenta.ninguna]];
-  s+='<section class="tarj"><h3 class="tarjtit">Rendimiento y calidad de cada persona · '+etiqPer+
-    '<span class="tarjsub">la marca amarilla es la meta de '+fInt(mR)+' esq/h · promedio del equipo '+fInt(promPer)+'</span></h3>'+
-    '<div class="grupos">'+grupos.map(function(g){
-      return '<button class="gchip'+(E.cump===g[0]?" gchip-on":"")+' g-'+g[0]+'" data-cump="'+g[0]+'">'+
-        '<b>'+g[2]+'</b><span>'+g[1]+'</span></button>';
-    }).join("")+'</div>'+
-    '<div class="grupo grupo-wrap ordenbar"><span class="lblmini">Ordenar por</span>'+
-    '<button class="chip'+(E.orden==="rend"?" chip-on":"")+'" data-orden="rend">Rendimiento</button>'+
-    '<button class="chip'+(E.orden==="cal"?" chip-on":"")+'" data-orden="cal">Calidad</button></div>'+
-    (filasCinta.length?htmlCinta(filasCinta):'<div class="vacio">Ninguna persona en este grupo.</div>')+
-    '</section>';
+  accD.forEach(function(a,p){ rankDia.push({ k:p, nom:idx.personas[p].nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null }); });
+  if(esCal) rankDia=rankDia.filter(function(x){ return x.cf!=null; }).sort(function(a,b){ return b.cf-a.cf; });
+  else rankDia.sort(function(a,b){ return b.v-a.v; });
+  s+='<div class="rejilla2">'+
+    '<section class="tarj tarj-tenue"><h3 class="tarjtit">Mejores 3 '+(esCal?"en calidad":"en rendimiento")+
+    '<span class="tarjsub">'+dmy(ref.ms)+'</span></h3>'+htmlPodio(rankDia.slice(0,3),false,esCal)+'</section>'+
+    '<section class="tarj tarj-tenue"><h3 class="tarjtit">Requieren acompañamiento'+
+    '<span class="tarjsub">3 más bajos del día</span></h3>'+htmlPodio(rankDia.slice(-3).reverse(),true,esCal)+'</section></div>';
 
   return s+"</div>";
 }
 
-function vistaDetalle(persona,equipoRegs){
-  var idx=E.idx;
+/* Detalle de una persona, con sus propios filtros de día, semana, mes y año. */
+function vistaDetalle(persona,equipoRegs,equipo){
+  var idx=E.idx, mR=metaRend(), mC=metaCal();
   var hist=idx.porPersona.get(persona.i)||[];
-  var ultimo=hist.length?hist[hist.length-1]:null;
-  var dRef=ultimo?ultimo.d:0;
-  var msRef=idx.msDe(dRef), fRef=new Date(msRef);
-  var ref={ d:dRef, ms:msRef, sem:ultimo?ultimo.sem:0, anio:fRef.getUTCFullYear(), mes:fRef.getUTCMonth(),
-    ciclo:ultimo?ultimo.ciclo:(fRef.getUTCFullYear()%100) };
+  if(!hist.length){
+    return '<div class="detcab"><button class="btn btn-sec" id="volverequipo">← Volver al equipo</button></div>'+
+      '<div class="vacio">'+esc(persona.nom)+' no tiene registros en la base.</div>';
+  }
 
-  var per={}, eq={};
-  ["dia","semana","mes","anual"].forEach(function(k){
-    per[k]=agrega(hist.filter(filtroPeriodo(k,ref)));
-    eq[k]=agrega(equipoRegs.filter(filtroPeriodo(k,ref)));
-  });
-
+  var dias=Array.from(new Set(hist.map(function(r){ return r.d; }))).sort(function(a,b){ return b-a; });
   var sems=Array.from(new Set(hist.map(function(r){ return r.sem; }))).sort(function(a,b){ return b-a; });
-  var ult4=sems.slice(0,4), ant4=sems.slice(4,8);
-  var ra=agrega(hist.filter(function(r){ return ult4.indexOf(r.sem)>=0; })).r;
-  var rb=agrega(hist.filter(function(r){ return ant4.indexOf(r.sem)>=0; })).r;
-  var tend=(ra&&rb)?(ra/rb-1):null;
+  var meses=Array.from(new Set(hist.map(function(r){ return r.anio*12+r.mes; }))).sort(function(a,b){ return b-a; });
+  var anios=Array.from(new Set(hist.map(function(r){ return r.ciclo; }))).sort(function(a,b){ return b-a; });
+
+  var per=E.detPeriodo||"dia";
+  var lista=(per==="dia")?dias:(per==="semana")?sems:(per==="mes")?meses:anios;
+  var clave=(E.detClave!=null&&lista.indexOf(E.detClave)>=0)?E.detClave:lista[0];
+  var filtro=(per==="dia")?function(r){ return r.d===clave; }
+    :(per==="semana")?function(r){ return r.sem===clave; }
+    :(per==="mes")?function(r){ return r.anio*12+r.mes===clave; }
+    :function(r){ return r.ciclo===clave; };
+
+  function etiqueta(p,c){
+    if(p==="dia") return dmy(idx.msDe(c));
+    if(p==="semana") return "Semana "+c;
+    if(p==="mes") return MESES[c%12]+" "+Math.floor(c/12);
+    return "Ciclo 20"+c;
+  }
+
+  var mio=agrega(hist.filter(filtro));
+  var eqAg=agrega(equipoRegs.filter(filtro));
+  var difEq=(mio.r&&eqAg.r)?(mio.r/eqAg.r-1):null;
+  var registros=hist.filter(filtro).sort(function(a,b){ return b.d-a.d; });
 
   var s='<div class="detcab"><button class="btn btn-sec" id="volverequipo">← Volver al equipo</button>'+
     '<button class="btn btn-pri btn-mostrar" id="mostrar" data-p="'+persona.i+'">Mostrar a la persona</button>'+
     '<div><div class="detnomtit">'+esc(persona.nom)+'</div>'+
     '<div class="detnomsub">Código '+persona.cod+' · '+esc(persona.labor)+' · líder actual '+esc(persona.lider)+
-    (persona.semUlt?" (asignado por la semana "+persona.semUlt+")":"")+'</div></div></div>';
+    (persona.semUlt?" (por la semana "+persona.semUlt+")":"")+'</div></div></div>';
 
+  /* filtros propios de la persona */
+  s+='<div class="barrafiltros"><div class="grupo">'+
+    [["dia","Día"],["semana","Semana"],["mes","Mes"],["anual","Año"]].map(function(x){
+      return '<button class="chip'+(per===x[0]?" chip-on":"")+'" data-detper="'+x[0]+'">'+x[1]+'</button>';
+    }).join("")+'</div><div class="grupo">'+
+    '<label class="lblmini" for="fdetclave">'+(per==="dia"?"Fecha":per==="semana"?"Semana":per==="mes"?"Mes":"Ciclo")+'</label>'+
+    '<select id="fdetclave" class="inp inp-mini">'+lista.slice(0,240).map(function(c){
+      return '<option value="'+c+'"'+(c===clave?" selected":"")+'>'+esc(etiqueta(per,c))+'</option>';
+    }).join("")+'</select></div></div>';
+
+  s+='<div class="metasbarra">'+esc(etiqueta(per,clave))+' · metas <b>'+fInt(mR)+' esq/h</b> y <b>'+fPct(mC)+'</b></div>';
+
+  s+='<div class="kpis">'+
+    htmlKpi("Esquejes cosechados",fInt(mio.esq),"",f1(mio.hor)+" horas · "+mio.n+(mio.n===1?" día":" días"),true,"")+
+    htmlKpi("Rendimiento",fInt(mio.r),"esq/h","meta "+fInt(mR)+" · equipo "+fInt(eqAg.r)+" ("+difTxt(difEq)+")",false,claseMeta(mio.r,mR))+
+    htmlKpi("Calidad",fPct(mio.cf),"","meta "+fPct(mC)+" · equipo "+fPct(eqAg.cf),false,claseMeta(mio.cf,mC))+
+    htmlKpi("Su posición en el equipo",posicionEquipo(persona,equipo,filtro),"","por rendimiento en este período",false,"")+
+    '</div>';
+
+  /* gráficos del período elegido: rendimiento y calidad, uno al lado del otro */
+  var mapa=new Map(), etiquetas=[];
+  function acum(k,r){ if(!mapa.has(k)) mapa.set(k,[]); mapa.get(k).push(r); }
+  if(per==="dia"){
+    var desde=clave-13;
+    hist.forEach(function(r){ if(r.d>=desde&&r.d<=clave) acum(r.d,r); });
+    for(var d=desde;d<=clave;d++){
+      var ms=idx.msDe(d);
+      etiquetas.push({ k:d, label:String(new Date(ms).getUTCDate()), sub:MESES[new Date(ms).getUTCMonth()], hl:d===clave });
+    }
+  } else if(per==="semana"){
+    hist.forEach(function(r){ if(r.sem===clave) acum(r.d,r); });
+    Array.from(mapa.keys()).sort(function(a,b){ return a-b; }).forEach(function(d){
+      var ms=idx.msDe(d);
+      etiquetas.push({ k:d, label:DIA_NOMBRE[new Date(ms).getUTCDay()], sub:dm(ms), hl:false });
+    });
+  } else if(per==="mes"){
+    hist.forEach(function(r){ if(r.anio*12+r.mes===clave) acum(r.sem,r); });
+    Array.from(mapa.keys()).sort(function(a,b){ return a-b; }).forEach(function(x){
+      etiquetas.push({ k:x, label:"S"+String(x).slice(2), hl:false });
+    });
+  } else {
+    hist.forEach(function(r){ if(r.ciclo===clave) acum(r.anio*12+r.mes,r); });
+    Array.from(mapa.keys()).sort(function(a,b){ return a-b; }).forEach(function(x){
+      etiquetas.push({ k:x, label:MESES[x%12], hl:false });
+    });
+  }
+  var serieR=etiquetas.map(function(e){
+    var l=mapa.get(e.k), ag=l?agrega(l):null;
+    return { k:e.k, label:e.label, sub:e.sub, hl:e.hl, v:ag?ag.r:null };
+  });
+  var serieC=etiquetas.map(function(e){
+    var l=mapa.get(e.k), ag=l?agrega(l):null;
+    return { k:e.k, label:e.label, sub:e.sub, hl:e.hl, v:(ag&&ag.cf!=null)?ag.cf*100:null };
+  });
+  s+='<div class="rejilla2">'+
+    '<section class="tarj"><h3 class="tarjtit">Rendimiento<span class="tarjsub">esquejes por hora · línea amarilla, la meta</span></h3>'+
+    svgBarras(serieR,{refLinea:mR,etiquetaRef:"meta",refLinea2:eqAg.r,etiquetaRef2:"equipo"})+'</section>'+
+    '<section class="tarj"><h3 class="tarjtit">Calidad<span class="tarjsub">conformidad en % · línea amarilla, la meta</span></h3>'+
+    svgBarras(serieC,{refLinea:mC*100,etiquetaRef:"meta",color:"var(--deep2)"})+'</section></div>';
+
+  /* fichas de la persona */
+  var sems4=sems.slice(0,4), sems8=sems.slice(4,8);
+  var ra=agrega(hist.filter(function(r){ return sems4.indexOf(r.sem)>=0; })).r;
+  var rb=agrega(hist.filter(function(r){ return sems8.indexOf(r.sem)>=0; })).r;
+  var tend=(ra&&rb)?(ra/rb-1):null;
+  var vida=agrega(hist);
   s+='<div class="fichas">'+
     htmlFicha("Ingreso a la finca",dmy(persona.ingreso))+
     htmlFicha("Experiencia",esc(persona.exp))+
     htmlFicha("Estado",persona.activo?"Laborando":"Retirado")+
-    htmlFicha("Registros históricos",fInt(hist.length))+
-    htmlFicha("Conformidad del año",fPct(per.anual.cf))+
-    htmlFicha("Tendencia (4 sem vs 4 sem)",tend==null?"—":((tend>=0?"▲ +":"▼ ")+nf1.format(tend*100)+"%"),tend==null?null:(tend>=0?"alto":"bajo"))+
+    htmlFicha("Histórico completo",fInt(vida.r)+" esq/h · "+fPct(vida.cf))+
+    htmlFicha("Registros en la base",fInt(hist.length))+
+    htmlFicha("Tendencia 4 sem vs 4 sem",tend==null?"—":((tend>=0?"▲ +":"▼ ")+nf1.format(tend*100)+"%"),
+      tend==null?null:(tend>=0?"alto":"bajo"))+
     '</div>';
 
-  s+='<div class="kpis">'+[["dia","Día "+dmy(ref.ms)],["semana","Semana "+ref.sem],
-    ["mes","Mes "+MESES[ref.mes]+" "+ref.anio],["anual","Año 20"+ref.ciclo]].map(function(x){
-    var d=(per[x[0]].r&&eq[x[0]].r)?(per[x[0]].r/eq[x[0]].r-1):null;
-    return htmlKpi(x[1],fInt(per[x[0]].r),"esq/h","equipo "+fInt(eq[x[0]].r)+" · <b class=\"t-"+
-      (d==null?"medio":(d>=0?"alto":"bajo"))+'">'+difTxt(d)+"</b>",x[0]==="dia");
-  }).join("")+'</div>';
-
-  var desde=ref.d-29, m30=new Map();
-  hist.forEach(function(r){ if(r.d>=desde&&r.d<=ref.d){ if(!m30.has(r.d)) m30.set(r.d,[]); m30.get(r.d).push(r); } });
-  var s30=[];
-  for(var d=desde;d<=ref.d;d++){
-    var l=m30.get(d);
-    s30.push({ k:d, label:String(new Date(idx.msDe(d)).getUTCDate()), v:l?agrega(l).r:null });
-  }
-  s+='<section class="tarj"><h3 class="tarjtit">Últimos 30 días'+
-    '<span class="tarjsub">esq/h por día · vacío = no cosechó o sin horas</span></h3>'+
-    svgBarras(s30,{refLinea:eq.anual.r,etiquetaRef:"prom. equipo año"})+'</section>';
-
-  var s12=sems.slice(0,12).reverse().map(function(x){
-    return { k:x, label:String(x).slice(2), v:agrega(hist.filter(function(r){ return r.sem===x; })).r };
+  /* tabla de los registros del período */
+  var filasR="";
+  registros.forEach(function(r){
+    filasR+='<tr><td>'+dmy(r.ms)+'</td><td class="num">'+r.sem+'</td><td>Día '+r.dia+'</td>'+
+      '<td class="num">'+fInt(r.esq)+'</td><td class="num">'+f1(r.hor)+'</td>'+
+      '<td class="num fuerte '+(r.r?(r.r>=mR?"t-alto":"t-bajo"):"")+'">'+(r.r?fInt(r.r):"—")+'</td>'+
+      '<td class="num">'+chipCal(r.cf,mC)+'</td><td class="mini">'+esc(corto(r.lider))+'</td></tr>';
   });
-  var mm=new Map();
-  hist.forEach(function(r){ var key=r.anio*12+r.mes; if(!mm.has(key)) mm.set(key,[]); mm.get(key).push(r); });
-  var s12m=Array.from(mm.keys()).sort(function(a,b){ return a-b; }).slice(-12).map(function(k){
-    return { k:k, label:MESES[k%12], sub:String(Math.floor(k/12)).slice(2), v:agrega(mm.get(k)).r };
-  });
-  s+='<div class="rejilla2"><section class="tarj"><h3 class="tarjtit">Últimas 12 semanas'+
-    '<span class="tarjsub">semana del calendario de la finca</span></h3>'+
-    svgBarras(s12,{refLinea:eq.anual.r})+'</section>'+
-    '<section class="tarj"><h3 class="tarjtit">Últimos 12 meses'+
-    '<span class="tarjsub">histórico completo, incluso con otros líderes</span></h3>'+
-    svgBarras(s12m,{refLinea:eq.anual.r})+'</section></div>';
+  s+='<section class="tarj"><h3 class="tarjtit">Registros de '+esc(etiqueta(per,clave))+
+    '<span class="tarjsub">'+registros.length+(registros.length===1?" registro":" registros")+'</span></h3>'+
+    '<div class="tablabox"><table class="tabla"><thead><tr><th>Fecha</th><th class="num">Semana</th><th>Día</th>'+
+    '<th class="num">Esquejes</th><th class="num">Horas</th><th class="num">esq/h</th>'+
+    '<th class="num">Calidad</th><th>Líder</th></tr></thead><tbody>'+filasR+'</tbody></table></div></section>';
 
+  /* histórico por líder */
   var ml=new Map();
   hist.forEach(function(r){
-    if(!ml.has(r.lider)) ml.set(r.lider,{n:0,desde:r.ms,hasta:r.ms,esq:0,hor:0});
+    if(!ml.has(r.lider)) ml.set(r.lider,{n:0,desde:r.ms,hasta:r.ms,esq:0,hor:0,cf:0,ncf:0});
     var a=ml.get(r.lider); a.n++; a.hasta=r.ms; a.esq+=r.esq; a.hor+=r.hor;
+    if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
   });
   var filasL="";
   ml.forEach(function(a,l){
     filasL+='<tr><td>'+esc(l)+'</td><td>'+dmy(a.desde)+'</td><td>'+dmy(a.hasta)+'</td>'+
       '<td class="num">'+fInt(a.n)+'</td><td class="num">'+fInt(a.esq)+'</td>'+
-      '<td class="num fuerte">'+fInt(a.hor>0?a.esq/a.hor:null)+'</td></tr>';
+      '<td class="num fuerte">'+fInt(a.hor>0?a.esq/a.hor:null)+'</td>'+
+      '<td class="num">'+(a.ncf?fPct(a.cf/a.ncf):"—")+'</td></tr>';
   });
-  s+='<section class="tarj"><h3 class="tarjtit">Histórico por líder'+
-    '<span class="tarjsub">el rendimiento se conserva aunque haya cambiado de equipo</span></h3>'+
+  s+='<section class="tarj tarj-tenue"><h3 class="tarjtit">Histórico por líder'+
+    '<span class="tarjsub">se conserva aunque haya cambiado de equipo</span></h3>'+
     '<div class="tablabox"><table class="tabla"><thead><tr><th>Líder</th><th>Desde</th><th>Hasta</th>'+
-    '<th class="num">Registros</th><th class="num">Esquejes</th><th class="num">esq/h</th></tr></thead>'+
-    '<tbody>'+filasL+'</tbody></table></div></section>';
-
-  var filasR="";
-  hist.slice(-20).reverse().forEach(function(r){
-    filasR+='<tr><td>'+dmy(r.ms)+'</td><td class="num">'+r.sem+'</td><td>Día '+r.dia+'</td>'+
-      '<td class="num">'+fInt(r.esq)+'</td><td class="num">'+f1(r.hor)+'</td>'+
-      '<td class="num fuerte">'+(r.r?fInt(r.r):"—")+'</td><td class="num">'+fPct(r.cf)+'</td>'+
-      '<td class="mini">'+esc(corto(r.lider))+'</td></tr>';
-  });
-  s+='<section class="tarj"><h3 class="tarjtit">Últimos 20 registros<span class="tarjsub">detalle diario</span></h3>'+
-    '<div class="tablabox"><table class="tabla"><thead><tr><th>Fecha</th><th class="num">Semana</th><th>Día</th>'+
-    '<th class="num">Esquejes</th><th class="num">Horas</th><th class="num">esq/h</th>'+
-    '<th class="num">Conformidad</th><th>Líder</th></tr></thead><tbody>'+filasR+'</tbody></table></div></section>';
+    '<th class="num">Registros</th><th class="num">Esquejes</th><th class="num">esq/h</th>'+
+    '<th class="num">Calidad</th></tr></thead><tbody>'+filasL+'</tbody></table></div></section>';
   return s;
+}
+
+function posicionEquipo(persona,equipo,filtro){
+  if(!equipo||!equipo.length) return "—";
+  var idx=E.idx, arr=[];
+  equipo.forEach(function(p){
+    var ag=agrega((idx.porPersona.get(p.i)||[]).filter(filtro));
+    if(ag.r) arr.push({ i:p.i, r:ag.r });
+  });
+  arr.sort(function(a,b){ return b.r-a.r; });
+  for(var k=0;k<arr.length;k++) if(arr[k].i===persona.i) return (k+1)+" de "+arr.length;
+  return "sin registro";
 }
 
 /* Pantalla para voltear la tablet y mostrarle a la persona su propio desempeño.
@@ -1209,6 +1295,13 @@ function conectar(){
   on("mostrar","click",function(e){ E.mostrar=+e.currentTarget.getAttribute("data-p"); render(); });
   on("cerrarshow","click",function(){ E.mostrar=null; render(); });
 
+  document.querySelectorAll("[data-vista]").forEach(function(b){
+    b.addEventListener("click",function(){ E.vista=b.getAttribute("data-vista"); render(); });
+  });
+  document.querySelectorAll("[data-detper]").forEach(function(b){
+    b.addEventListener("click",function(){ E.detPeriodo=b.getAttribute("data-detper"); E.detClave=null; render(); });
+  });
+  on("fdetclave","change",function(e){ E.detClave=+e.target.value; render(); });
   document.querySelectorAll("[data-orden]").forEach(function(b){
     b.addEventListener("click",function(){ E.orden=b.getAttribute("data-orden"); render(); });
   });
@@ -1225,11 +1318,17 @@ function conectar(){
     b.addEventListener("click",function(){ E.verComo=b.getAttribute("data-vercomo"); E.personaSel=null; E.dRef=null; render(); });
   });
   document.querySelectorAll("[data-persona]").forEach(function(b){
-    b.addEventListener("click",function(){ E.personaSel=+b.getAttribute("data-persona"); render(); });
+    b.addEventListener("click",function(){
+      E.personaSel=+b.getAttribute("data-persona");
+      E.detPeriodo="dia"; E.detClave=null; render();
+    });
   });
   on("fdia","change",function(e){ E.dRef=+e.target.value; render(); });
   on("fsem","change",function(e){ E.semFiltro=e.target.value; render(); });
-  on("fper","change",function(e){ E.personaSel=e.target.value===""?null:+e.target.value; render(); });
+  on("fper","change",function(e){
+    E.personaSel=e.target.value===""?null:+e.target.value;
+    E.detPeriodo="dia"; E.detClave=null; render();
+  });
 
   on("validar","click",function(){ validarTexto(document.getElementById("pegado").value); });
   on("pegado","paste",function(e){

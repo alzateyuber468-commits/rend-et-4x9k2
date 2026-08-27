@@ -234,7 +234,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 18:16"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-08-27 18:35"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -936,9 +936,9 @@ function vistaLider(lider,comoAdmin){
     '<button class="chip'+(E.orden==="rend"?" chip-on":"")+'" data-orden="rend">Rendimiento</button>'+
     '<button class="chip'+(E.orden==="cal"?" chip-on":"")+'" data-orden="cal">Calidad</button></div>'+
     (filas.length?htmlCinta(filas,esCal?"cal":"rend"):'<div class="vacio">Ninguna persona en este grupo.</div>')+
-    (sinRegistro.length?('<div class="sinreg"><b>'+sinRegistro.length+' sin registro '+etiqPer+':</b> '+
+    (!esApoyos&&sinRegistro.length?('<div class="sinreg"><b>'+sinRegistro.length+' sin registro '+etiqPer+':</b> '+
       sinRegistro.map(function(p){ return esc(corto(p.nom)); }).join(" · ")+'</div>'):"")+
-    (dormidos.length?('<div class="sinreg dormidos"><b>'+dormidos.length+' sin cosechar hace más de '+
+    (!esApoyos&&dormidos.length?('<div class="sinreg dormidos"><b>'+dormidos.length+' sin cosechar hace más de '+
       Math.round(umbral/7)+' semanas:</b> '+dormidos.sort(function(a,b){ return (a.dUlt||0)-(b.dUlt||0); }).map(function(p){
         return esc(corto(p.nom))+" ("+(p.dUlt==null?"sin registros":(ultBase-p.dUlt)+" días)");
       }).join(" · ")+'. Siguen como LABORANDO en el maestro. Revisa si ya salieron o cambiaron de labor.</div>'):"")+

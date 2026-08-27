@@ -887,7 +887,7 @@ function vistaLider(lider,comoAdmin){
     if(r.cf!=null&&r.cf>0){ a.cf+=r.cf; a.ncf++; }
   });
   var ultBase=idx.diasOrd.length?idx.diasOrd[0]:0, umbral=diasDormido();
-  function dormido(p){ return p.dUlt==null||(ultBase-p.dUlt)>umbral; }
+  function dormido(p){ return !esApoyos&&(p.dUlt==null||(ultBase-p.dUlt)>umbral); }
   var todasFilas=[], sinRegistro=[], dormidos=[];
   equipo.forEach(function(p){
     var a=acc.get(p.i);
@@ -1404,12 +1404,8 @@ function vistaAdmin(){
         'del tablero, no del Excel, y conserva las metas, los usuarios y los PIN.</p></section>';
 
       var al=[];
-      var sinHoras=idx.regs.filter(function(r){ return !(r.hor>0); }).length;
-      if(sinHoras) al.push(fInt(sinHoras)+" registros sin horas en total.");
       var cfRaro=idx.regs.filter(function(r){ return r.cf!=null&&r.cf>1; }).length;
       if(cfRaro) al.push(fInt(cfRaro)+" registros con calidad mayor al 100%.");
-      var sinCf=idx.regs.filter(function(r){ return r.cf==null; }).length;
-      if(sinCf) al.push(fInt(sinCf)+" registros sin revisión de calidad (casilla vacía o en cero). No entran en ningún promedio de calidad.");
       var esqSinHorasFilas=idx.regs.filter(function(r){ return !(r.hor>0)&&r.esq>0; });
       if(esqSinHorasFilas.length){
         al.push(fInt(esqSinHorasFilas.length)+" registros con esquejes y sin horas: esos esquejes SÍ suman al total, por eso el rendimiento de esa persona se ve más alto de lo normal en esa semana. Corrige las horas en el Excel.");
@@ -1418,15 +1414,6 @@ function vistaAdmin(){
       if(horasSinEsq) al.push(fInt(horasSinEsq)+" registros con horas y cero esquejes: sí cuentan y bajan el promedio. Revisa si faltó digitar los esquejes.");
       var atip=idx.regs.filter(function(r){ return r.r!=null&&(r.r>3000||r.r<100); }).length;
       if(atip) al.push(fInt(atip)+" registros con rendimiento atípico (bajo 100 o sobre 3.000 esq/h).");
-      var ultA=idx.diasOrd.length?idx.diasOrd[0]:0, umbA=diasDormido();
-      var dorm=idx.personas.filter(function(p){
-        return p.activo&&p.cosecha&&(p.dUlt==null||(ultA-p.dUlt)>umbA);
-      });
-      if(dorm.length) al.push(fInt(dorm.length)+" personas con labor COSECHA y estado LABORANDO que no cosechan hace más de "+
-        Math.round(umbA/7)+" semanas: "+dorm.map(function(p){ return corto(p.nom)+" ("+(ultA-p.dUlt)+" días, líder "+corto(p.lider)+")"; }).join("; ")+
-        ". Verifica en el maestro si ya salieron o cambiaron de labor.");
-      var noCos=idx.personas.filter(function(p){ return p.activo&&!p.cosecha; }).length;
-      if(noCos) al.push(fInt(noCos)+" personas activas con labor distinta a cosecha de esquejes: no salen en los tableros, pero su histórico se conserva.");
       var fuera=idx.lideres.filter(function(l){
         if(tieneUsuario(l)) return false;
         var pp=idx.equipos.get(l)||[];

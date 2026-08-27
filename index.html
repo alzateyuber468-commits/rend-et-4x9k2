@@ -234,7 +234,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 18:35"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-08-27 19:05"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -702,6 +702,7 @@ function htmlCab(titulo,sub,botones){
 var E={ ds:null, idx:null, sesion:null, periodo:"dia", dRef:null, semFiltro:"", personaSel:null,
   pestana:"datos", previo:null, mensaje:null, verComo:"", red:"", mostrar:null,
   vista:"rend", orden:"apellido", cump:"todos", detPeriodo:"dia", detClave:null,
+  estadoFiltro:"activos", buscarPersona:"",
   mesFiltro:"", anioFiltro:"", showPeriodo:"dia", showClave:null };
 
 function setDs(ds){
@@ -1446,38 +1447,98 @@ function vistaAdmin(){
       htmlKpi("Cosecheros activos",fInt(cosecheros),"de "+activos,"activos en cosecha / total activos")+
       '</div>';
 
+    /* --- por líder: solo su equipo de cosecha, sin mezclar apoyos --- */
     var filas="";
     var arr=[];
     idx.equipos.forEach(function(personas,lider){
       var act=personas.filter(function(p){ return p.activo&&p.cosecha; });
-      var otros=personas.filter(function(p){ return p.activo&&!p.cosecha; }).length;
       var regs=[];
       act.forEach(function(p){ var h=idx.porPersona.get(p.i); if(h) regs=regs.concat(h); });
-      arr.push({ lider:lider, act:act.length, otros:otros, an:agrega(regs),
+      arr.push({ lider:lider, act:act.length, an:agrega(regs),
         hoy:agrega(regs.filter(function(r){ return r.d===ult; })),
         oficial:tieneUsuario(lider) });
     });
+    arr=arr.filter(function(l){ return l.act>0||l.oficial; });
     arr.sort(function(a,b){ return (b.an.r||0)-(a.an.r||0); });
     arr.forEach(function(l){
       filas+='<tr><td>'+esc(l.lider)+(l.oficial?"":'<span class="tag">sin usuario</span>')+'</td>'+
-        '<td class="num">'+fInt(l.act)+'</td><td class="num">'+fInt(l.otros)+'</td>'+
+        '<td class="num">'+fInt(l.act)+'</td>'+
         '<td class="num">'+fInt(l.hoy.r)+'</td><td class="num fuerte">'+fInt(l.an.r)+'</td>'+
         '<td class="num">'+fInt(l.an.esq)+'</td><td class="num">'+fPct(l.an.cf)+'</td>'+
         '<td><button class="btn btn-mini" data-vercomo="'+esc(l.lider)+'">Abrir</button></td></tr>';
     });
-    s+='<section class="tarj"><h3 class="tarjtit">Comparativo por líder'+
-      '<span class="tarjsub">activos en cosecha, asignados por su semana de cosecha más reciente</span></h3>'+
-      '<div class="tablabox"><table class="tabla"><thead><tr><th>Líder</th><th class="num">En cosecha</th>'+
-      '<th class="num">Otra labor</th><th class="num">Último día</th><th class="num">Acumulado</th>'+
+    s+='<section class="tarj"><h3 class="tarjtit">Rendimiento por equipo de cosecha'+
+      '<span class="tarjsub">solo personas activas en labor COSECHA, asignadas por su semana de cosecha más reciente. Los apoyos no entran aquí.</span></h3>'+
+      '<div class="tablabox"><table class="tabla"><thead><tr><th>Líder</th><th class="num">Cosecheros</th>'+
+      '<th class="num">Último día</th><th class="num">Acumulado</th>'+
       '<th class="num">Esquejes</th><th class="num">Conformidad</th><th></th></tr></thead><tbody>'+filas+
       '</tbody></table></div></section>';
+
+    /* --- apoyos: un solo grupo aparte, por labor, sin mezclar con ningún líder --- */
+    var apoyos=idx.personas.filter(function(p){ return p.activo&&!p.cosecha; });
+    var porLabor=new Map();
+    apoyos.forEach(function(p){
+      if(!porLabor.has(p.labor)) porLabor.set(p.labor,[]);
+      porLabor.get(p.labor).push(p);
+    });
+    var filasA="";
+    Array.from(porLabor.keys()).sort(function(a,b){ return a.localeCompare(b,"es"); }).forEach(function(lab){
+      var ps=porLabor.get(lab);
+      var regs=[]; ps.forEach(function(p){ var h=idx.porPersona.get(p.i); if(h) regs=regs.concat(h); });
+      var an=agrega(regs), hoyA=agrega(regs.filter(function(r){ return r.d===ult; }));
+      filasA+='<tr><td>'+esc(lab)+'</td><td class="num">'+fInt(ps.length)+'</td>'+
+        '<td class="num">'+fInt(hoyA.r)+'</td><td class="num fuerte">'+fInt(an.r)+'</td>'+
+        '<td class="num">'+fInt(an.esq)+'</td><td class="num">'+fPct(an.cf)+'</td></tr>';
+    });
+    s+='<section class="tarj"><h3 class="tarjtit">Apoyos, aparte de la base de cosecha'+
+      '<span class="tarjsub">'+fInt(apoyos.length)+' personas activas en labores distintas a cosecha, agrupadas por su labor · no pertenecen al equipo de ningún líder para efectos de rendimiento</span></h3>'+
+      (filasA?('<div class="tablabox"><table class="tabla"><thead><tr><th>Labor</th><th class="num">Personas</th>'+
+        '<th class="num">Último día</th><th class="num">Acumulado</th>'+
+        '<th class="num">Esquejes</th><th class="num">Conformidad</th></tr></thead><tbody>'+filasA+'</tbody></table></div>')
+        :'<div class="vacio">Sin personas en apoyos.</div>')+'</section>';
 
     var serieS=idx.semOrd.slice(0,20).reverse().map(function(x){
       return { k:x, label:String(x).slice(2), v:agrega(idx.regs.filter(function(r){ return r.sem===x; })).r };
     });
     s+='<section class="tarj"><h3 class="tarjtit">Rendimiento de la finca por semana'+
-      '<span class="tarjsub">todas las personas de la base</span></h3>'+
+      '<span class="tarjsub">todas las personas de la base, cosecha y apoyos juntos</span></h3>'+
       svgBarras(serieS,{refLinea:tot.r,etiquetaRef:"prom. base"})+'</section>';
+
+    /* --- personas: buscador con filtro por estado --- */
+    var filtroEstado=E.estadoFiltro||"activos";
+    var listaP=idx.personas.filter(function(p){
+      if(filtroEstado==="activos") return p.activo;
+      if(filtroEstado==="retirados") return !p.activo;
+      return true;
+    });
+    if(E.buscarPersona){
+      var q=norm(E.buscarPersona);
+      listaP=listaP.filter(function(p){ return norm(p.nom).indexOf(q)>=0; });
+    }
+    listaP=listaP.slice().sort(function(a,b){ return a.nom.localeCompare(b.nom,"es"); });
+    var filasP="";
+    listaP.slice(0,200).forEach(function(p){
+      var h=idx.porPersona.get(p.i)||[];
+      var ult2=h.length?h[h.length-1]:null;
+      filasP+='<tr><td>'+esc(p.nom)+'</td><td class="num">'+p.cod+'</td>'+
+        '<td>'+(p.activo?'<span class="chipcal c-ok">LABORANDO</span>':'<span class="chipcal c-no">RETIRADO</span>')+'</td>'+
+        '<td>'+esc(p.labor)+(p.cosecha?"":'<span class="tag">apoyo</span>')+'</td>'+
+        '<td>'+esc(p.lider)+'</td>'+
+        '<td>'+(ult2?dmy(ult2.ms):"—")+'</td>'+
+        '<td><button class="btn btn-mini" data-vercomo="'+esc(p.lider)+'">Ver equipo</button></td></tr>';
+    });
+    s+='<section class="tarj"><h3 class="tarjtit">Buscar personas'+
+      '<span class="tarjsub">activas, retiradas, o todas · '+fInt(listaP.length)+' encontradas'+
+      (listaP.length>200?" (mostrando 200)":"")+'</span></h3>'+
+      '<div class="barrafiltros"><div class="grupo">'+
+      [["activos","Laborando"],["retirados","Retirados"],["todos","Todos"]].map(function(x){
+        return '<button class="chip'+(filtroEstado===x[0]?" chip-on":"")+'" data-estado="'+x[0]+'">'+x[1]+'</button>';
+      }).join("")+'</div><div class="grupo">'+
+      '<input class="inp inp-mini inp-per" id="buscarpersona" type="text" placeholder="Buscar por nombre…" value="'+esc(E.buscarPersona||"")+'">'+
+      '</div></div>'+
+      (filasP?('<div class="tablabox"><table class="tabla"><thead><tr><th>Nombre</th><th class="num">Código</th>'+
+        '<th>Estado</th><th>Labor</th><th>Líder</th><th>Último registro</th><th></th></tr></thead><tbody>'+filasP+'</tbody></table></div>')
+        :'<div class="vacio">Sin resultados.</div>')+'</section>';
   }
 
   if(E.pestana==="usuarios"){
@@ -1684,6 +1745,16 @@ function conectar(){
       E.mensaje={tipo:"ok",txt:"Usuario de "+lider+" eliminado. Recuerda subir datos.json."};
       render();
     });
+  });
+  document.querySelectorAll("[data-estado]").forEach(function(b){
+    b.addEventListener("click",function(){ E.estadoFiltro=b.getAttribute("data-estado"); render(); });
+  });
+  on("buscarpersona","input",function(e){
+    E.buscarPersona=e.target.value;
+    var pos=e.target.selectionStart;
+    render();
+    var el=document.getElementById("buscarpersona");
+    if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(err){} }
   });
   on("guardarpinadmin","click",function(){
     var val=String(document.getElementById("pinadmin").value||"").trim();

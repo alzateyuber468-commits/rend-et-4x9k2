@@ -6,9 +6,11 @@
 <title>Rendimientos de cosecha · Flores El Trigal</title>
 <style>
 :root{
-  --bg:#EDF1EA; --surface:#FFFFFF; --ink:#15201B; --muted:#6C7C73; --line:#DBE3DC;
-  --deep:#143D2E; --deep2:#2C6B51; --accent:#B23A6B; --alto:#1F7A54; --bajo:#B4501C; --medio:#7A8A80;
-  --sombra:0 1px 0 rgba(20,61,46,.04), 0 8px 24px -18px rgba(20,61,46,.35);
+  /* Paleta Flores El Trigal: azul #1F3361, amarillo #FFD40A, gris #6B6D6D */
+  --bg:#F1F3F7; --surface:#FFFFFF; --ink:#151C2E; --muted:#6B6D6D; --line:#D9DDE6;
+  --deep:#1F3361; --deep2:#3A548F; --accent:#FFD40A; --accent-txt:#8A6B00;
+  --alto:#1B7A4B; --bajo:#C0451B; --medio:#6B6D6D;
+  --sombra:0 1px 0 rgba(31,51,97,.04), 0 8px 24px -18px rgba(31,51,97,.4);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg)}
@@ -16,16 +18,16 @@ body{color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans
 h1,h2,h3,p,ol,ul,table{margin:0}
 .num,.kpival,.cintaval{font-variant-numeric:tabular-nums}
 .pantalla{padding:14px 16px 44px;max-width:1180px;margin:0 auto}
-.cab{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--deep);color:#EAF3ED;border-radius:12px;margin-bottom:14px}
+.cab{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--deep);color:#EDF0F7;border-radius:12px;margin-bottom:14px;border-bottom:3px solid var(--accent)}
 .cabizq{display:flex;gap:10px;align-items:center;min-width:0}
 .cabmarca{display:inline-flex;background:rgba(255,255,255,.1);padding:6px;border-radius:9px}
 .cabtit{font-size:17px;font-weight:650;letter-spacing:-.01em;line-height:1.2}
 .cabsub{font-size:12px;opacity:.8;margin-top:2px}
 .cabbtns{display:flex;gap:8px;flex-shrink:0}
-.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(120% 100% at 50% 0%, #F6F9F4 0%, var(--bg) 55%, #DFE7E0 100%)}
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(120% 100% at 50% 0%, #F7F9FD 0%, var(--bg) 55%, #DCE1EC 100%)}
 .loginbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;width:100%;max-width:420px;box-shadow:var(--sombra)}
 .marca{display:flex;gap:10px;align-items:center;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
-.marcaesq{display:inline-flex;background:#FBEEF3;padding:7px;border-radius:10px}
+.marcaesq{display:inline-flex;background:var(--deep);padding:7px;border-radius:10px}
 .marcatit{font-size:18px;font-weight:680;letter-spacing:-.015em}
 .marcasub{font-size:12px;color:var(--muted)}
 .loginpie{margin-top:14px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
@@ -37,12 +39,12 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .btn{font:inherit;font-weight:600;border-radius:9px;padding:10px 14px;cursor:pointer;border:1px solid transparent}
 .btn-pri{background:var(--deep);color:#fff;width:100%;margin-top:16px}
 .btn-sec{background:#fff;border-color:var(--line);color:var(--deep);padding:8px 12px;font-size:13px}
-.btn-mini{background:#F2F6F1;border-color:var(--line);color:var(--deep);padding:5px 9px;font-size:12px}
+.btn-mini{background:#F0F3F9;border-color:var(--line);color:var(--deep);padding:5px 9px;font-size:12px}
 .btn[disabled]{opacity:.45;cursor:not-allowed}
 .botonera{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .botonera .btn-pri{width:auto;margin-top:0}
 .err{margin-top:12px;font-size:13px;color:#8E2B2B;background:#FBEDED;border:1px solid #F0D2D2;padding:9px 11px;border-radius:9px}
-.ok{margin-top:12px;font-size:13px;color:#1B5C41;background:#EBF5EF;border:1px solid #CFE5D8;padding:9px 11px;border-radius:9px}
+.ok{margin-top:12px;font-size:13px;color:#15563B;background:#EAF4EE;border:1px solid #CBE3D6;padding:9px 11px;border-radius:9px}
 .barrafiltros{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
 .grupo{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
 .grupo-wrap{flex-wrap:wrap;overflow:visible}
@@ -50,9 +52,9 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .chip-on{background:var(--deep);border-color:var(--deep);color:#fff}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(186px,1fr));gap:10px;margin-bottom:14px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 13px 11px;box-shadow:var(--sombra)}
-.kpi-fuerte{border-color:#C6D6C9;background:linear-gradient(180deg,#FFFFFF 0%,#F6FAF6 100%)}
+.kpi-fuerte{border-color:#C3CDE0;background:linear-gradient(180deg,#FFFFFF 0%,#F7F9FD 100%)}
 .eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:650}
-.kpival{font-size:34px;font-weight:660;letter-spacing:-.03em;line-height:1.05;margin-top:6px;border-bottom:2px solid var(--accent);display:inline-block;padding-bottom:2px}
+.kpival{font-size:34px;font-weight:660;letter-spacing:-.03em;line-height:1.05;margin-top:6px;border-bottom:3px solid var(--accent);display:inline-block;padding-bottom:2px}
 .kpiun{font-size:12px;font-weight:600;letter-spacing:0;color:var(--muted);margin-left:5px}
 .kpipie{font-size:12px;color:var(--muted);margin-top:7px}
 .tarj{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;box-shadow:var(--sombra)}
@@ -66,19 +68,19 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .svgnote{font-size:14px;font-weight:650}
 .cinta{display:flex;flex-direction:column;gap:3px}
 .cintafila{display:grid;grid-template-columns:minmax(120px,1.1fr) 3fr auto 62px;gap:10px;align-items:center;background:none;border:0;border-radius:7px;padding:5px 6px;cursor:pointer;text-align:left;font:inherit;width:100%;color:inherit}
-.cintafila:hover{background:#F4F8F3}
+.cintafila:hover{background:#F3F5FB}
 .cintanom{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cintapista{position:relative;height:15px;background:#EFF3EE;border-radius:4px;overflow:hidden}
+.cintapista{position:relative;height:15px;background:#E8EBF2;border-radius:4px;overflow:hidden}
 .cintabarra{position:absolute;top:0;bottom:0;left:0;border-radius:4px}
 .cintabarra.t-alto{background:var(--deep2)}
-.cintabarra.t-medio{background:#8FA898}
-.cintabarra.t-bajo{background:#D8A98F}
-.cintaprom{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--accent);border-radius:2px}
+.cintabarra.t-medio{background:#8D9AB5}
+.cintabarra.t-bajo{background:#D9A78C}
+.cintaprom{position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--accent);border-radius:2px;box-shadow:0 0 0 1px rgba(138,107,0,.35)}
 .cintaval{font-size:13px;font-weight:650}
 .cintadif{font-size:12px;text-align:right}
 .podio{list-style:none;padding:0;display:flex;flex-direction:column;gap:4px}
-.podiofila{display:grid;grid-template-columns:22px 1fr auto 62px;gap:10px;align-items:center;width:100%;background:#F7FAF6;border:1px solid var(--line);border-radius:9px;padding:9px 10px;cursor:pointer;font:inherit;text-align:left;color:inherit}
-.podio-bajo .podiofila{background:#FDF6F1;border-color:#EFDCCF}
+.podiofila{display:grid;grid-template-columns:22px 1fr auto 62px;gap:10px;align-items:center;width:100%;background:#F5F7FC;border:1px solid var(--line);border-radius:9px;padding:9px 10px;cursor:pointer;font:inherit;text-align:left;color:inherit}
+.podio-bajo .podiofila{background:#FDF6EC;border-color:#EEDCC2}
 .podiopos{font-size:12px;font-weight:700;color:var(--muted);text-align:center}
 .podionom{font-size:13.5px;font-weight:560;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .podioval{font-size:15px;font-weight:680}
@@ -98,16 +100,53 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .tabla .num{text-align:right}
 .tabla .fuerte{font-weight:680}
 .tabla .mini{font-size:11.5px;color:var(--muted)}
-.tag{display:inline-block;margin-left:7px;font-size:10px;background:#FBEEF3;color:var(--accent);border:1px solid #F0D6E1;border-radius:999px;padding:1px 7px}
-.area{width:100%;min-height:170px;resize:vertical;padding:11px;border:1px solid var(--line);border-radius:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#FCFDFC;color:var(--ink)}
+.tag{display:inline-block;margin-left:7px;font-size:10px;background:#FFF6CC;color:var(--accent-txt);border:1px solid #EFDC97;border-radius:999px;padding:1px 7px}
+.area{width:100%;min-height:170px;resize:vertical;padding:11px;border:1px solid var(--line);border-radius:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#FCFCFE;color:var(--ink)}
 .cargas{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
-.cargaarchivo{background:#F7FAF6;border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:7px}
+.cargaarchivo{background:#F5F7FC;border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:7px}
 .nota{font-size:12px;color:var(--muted)}
 .previo{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
 .lista{padding-left:18px;font-size:13px}
 .lista li{margin-bottom:5px}
-.vacio{font-size:13px;color:var(--muted);background:#F7FAF6;border:1px dashed var(--line);border-radius:10px;padding:14px;text-align:center}
+.vacio{font-size:13px;color:var(--muted);background:#F5F7FC;border:1px dashed var(--line);border-radius:10px;padding:14px;text-align:center}
 .t-alto{color:var(--alto)}.t-bajo{color:var(--bajo)}.t-medio{color:var(--medio)}
+/* semáforos de meta en los KPI */
+.kpi-ok .kpival{border-bottom-color:var(--alto)}
+.kpi-no .kpival{border-bottom-color:var(--bajo)}
+.metas{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.metas .inp-mini{min-width:78px}
+.btn-mostrar{width:auto;margin-top:0}
+
+/* pantalla para mostrar a la persona */
+.show{max-width:820px;margin:0 auto;padding:18px 16px 40px;position:relative}
+.show-cerrar{position:absolute;top:14px;right:14px}
+.shownom{font-size:clamp(24px,5vw,34px);font-weight:700;letter-spacing:-.02em;line-height:1.1;padding-right:96px}
+.showfecha{font-size:14px;color:var(--muted);margin-top:4px;margin-bottom:18px}
+.showcajas{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.showcaja{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:16px 14px}
+.showcaja.s-ok{border-color:#9AC9B1;background:linear-gradient(180deg,#FFFFFF,#F0F9F4)}
+.showcaja.s-no{border-color:#E6BFA6;background:linear-gradient(180deg,#FFFFFF,#FDF4EE)}
+.showeye{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.showval{font-size:clamp(38px,9vw,56px);font-weight:700;letter-spacing:-.035em;line-height:1;margin-top:6px;font-variant-numeric:tabular-nums}
+.showun{font-size:15px;font-weight:600;color:var(--muted);margin-left:6px;letter-spacing:0}
+.showmeta{font-size:13px;color:var(--muted);margin-top:8px;font-weight:600}
+.showpie{font-size:14px;margin-top:2px;font-weight:600}
+.showcaja.s-ok .showpie{color:var(--alto)}
+.showcaja.s-no .showpie{color:var(--bajo)}
+.showcomp{margin-top:14px;padding:14px;border-radius:12px;font-size:clamp(15px,3.4vw,19px);font-weight:600;line-height:1.35}
+.showcomp.s-ok{background:#EAF4EE;border:1px solid #CBE3D6;color:#14563C}
+.showcomp.s-no{background:#FDF1E9;border:1px solid #EFD8C6;color:#8A3C10}
+.showcomp.s-neutro{background:#F4F7F3;border:1px solid var(--line);color:var(--ink)}
+.showchart{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.showcalidad{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.showpuntos{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.showpunto{flex:1 1 74px;border-radius:10px;padding:8px 6px;text-align:center;border:1px solid var(--line)}
+.showpunto.s-ok{background:#EAF4EE;border-color:#CBE3D6}
+.showpunto.s-no{background:#FDF1E9;border-color:#EFD8C6}
+.showpunto.s-neutro{background:#F5F7FC}
+.showpdia{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.showpval{display:block;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+
 @media (max-width:900px){
   .cargas{grid-template-columns:1fr}
   .kpival{font-size:29px}
@@ -147,6 +186,8 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA DE ESQUEJES";
+var META_REND_DEF = 1600;   // esquejes por hora
+var META_CAL_DEF = 0.92;    // conformidad
 var COLS = ["CODIGO","NOMBRE DEL COLABORADOR","SEMANA","TIPO REND","ESQUEJES COSECHADOS","HORAS COSECHADAS","CONFORMIDAD","LIDER 0","EXPERIENCIA","ACTIVO","LABOR","FECHA DE INGRESO PERSONA","FECHA DE INGRESO ESQUEJE"];
 var MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 var DIA_NOMBRE = ["dom","lun","mar","mié","jue","vie","sáb"];
@@ -154,6 +195,11 @@ var DIA_MS = 86400000;
 var STORE_KEY = "trigal_rend_v1";
 
 /* ------------------------------ utilidades ------------------------------ */
+
+function metaRend(){ var m=E.ds&&E.ds.meta?E.ds.meta.metaRend:null; return (m&&m>0)?m:META_REND_DEF; }
+function metaCal(){ var m=E.ds&&E.ds.meta?E.ds.meta.metaCal:null; return (m&&m>0)?m:META_CAL_DEF; }
+function cumple(v,meta){ return v==null?null:(v>=meta); }
+function claseMeta(v,meta){ var c=cumple(v,meta); return c==null?"":(c?" kpi-ok":" kpi-no"); }
 
 function norm(s){
   return String(s==null?"":s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toUpperCase();
@@ -441,13 +487,18 @@ function svgBarras(datos,opc){
   function y(v){ return base-((v||0)/maxV)*(base-26); }
   var s='<svg viewBox="0 0 '+w+' '+alto+'" preserveAspectRatio="xMidYMid meet" class="svgchart">';
   s+='<line x1="0" y1="'+base+'" x2="'+w+'" y2="'+base+'" stroke="var(--line)" stroke-width="1.5"/>';
+  if(opc.refLinea2){
+    s+='<line x1="0" y1="'+y(opc.refLinea2)+'" x2="'+w+'" y2="'+y(opc.refLinea2)+'" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="3 4"/>';
+    s+='<text x="'+(w-4)+'" y="'+(y(opc.refLinea2)-6)+'" text-anchor="end" class="svgtick">'+esc(opc.etiquetaRef2||"prom. equipo")+" "+fInt(opc.refLinea2)+'</text>';
+  }
   if(refL){
-    s+='<line x1="0" y1="'+y(refL)+'" x2="'+w+'" y2="'+y(refL)+'" stroke="var(--accent)" stroke-width="2" stroke-dasharray="9 7"/>';
-    s+='<text x="4" y="'+(y(refL)-6)+'" class="svgnote" fill="var(--accent)">'+esc(etiq)+" "+fInt(refL)+'</text>';
+    s+='<line x1="0" y1="'+y(refL)+'" x2="'+w+'" y2="'+y(refL)+'" stroke="var(--accent)" stroke-width="4" stroke-dasharray="10 6"/>';
+    s+='<text x="4" y="'+(y(refL)-8)+'" class="svgnote" fill="var(--accent-txt)">'+esc(etiq)+" "+fInt(refL)+'</text>';
   }
   datos.forEach(function(d,i){
     var x=gap*bw+i*(bw+gap*bw), h=Math.max(d.v?2:0, base-y(d.v));
-    s+='<rect x="'+x+'" y="'+y(d.v)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+(d.hl?"var(--accent)":"var(--deep)")+'" opacity="'+(d.v?0.92:0.14)+'"/>';
+    s+='<rect x="'+x+'" y="'+y(d.v)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+(d.hl?"var(--accent)":"var(--deep)")+'"'+
+      (d.hl?' stroke="var(--deep)" stroke-width="1.5"':'')+' opacity="'+(d.v?0.92:0.14)+'"/>';
     if(n<=16&&d.v) s+='<text x="'+(x+bw/2)+'" y="'+(y(d.v)-7)+'" text-anchor="middle" class="svgval">'+fInt(d.v)+'</text>';
     if(n<=34) s+='<text x="'+(x+bw/2)+'" y="'+(base+17)+'" text-anchor="middle" class="svgtick">'+esc(d.label)+'</text>';
     if(d.sub) s+='<text x="'+(x+bw/2)+'" y="'+(base+32)+'" text-anchor="middle" class="svgtick2">'+esc(d.sub)+'</text>';
@@ -455,8 +506,8 @@ function svgBarras(datos,opc){
   return s+"</svg>";
 }
 
-function htmlKpi(eyebrow,valor,unidad,pie,fuerte){
-  return '<div class="kpi'+(fuerte?" kpi-fuerte":"")+'"><div class="eyebrow">'+esc(eyebrow)+'</div>'+
+function htmlKpi(eyebrow,valor,unidad,pie,fuerte,semaforo){
+  return '<div class="kpi'+(fuerte?" kpi-fuerte":"")+(semaforo||"")+'"><div class="eyebrow">'+esc(eyebrow)+'</div>'+
     '<div class="kpival">'+valor+(unidad?'<span class="kpiun">'+esc(unidad)+'</span>':"")+'</div>'+
     (pie?'<div class="kpipie">'+pie+'</div>':"")+'</div>';
 }
@@ -494,7 +545,7 @@ function htmlPodio(filas,prom,bajo){
   });
   return s+"</ol>";
 }
-var LOGO='<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 22V9M12 9c0-3 2-5 5-5 0 3-2 5-5 5zm0 0C12 6 10 4 7 4c0 3 2 5 5 5z" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/></svg>';
+var LOGO='<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 22V9M12 9c0-3 2-5 5-5 0 3-2 5-5 5zm0 0C12 6 10 4 7 4c0 3 2 5 5 5z" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></svg>';
 function htmlCab(titulo,sub,botones){
   return '<header class="cab"><div class="cabizq"><span class="cabmarca">'+LOGO+'</span><div>'+
     '<div class="cabtit">'+esc(titulo)+'</div><div class="cabsub">'+esc(sub)+'</div></div></div>'+
@@ -504,7 +555,7 @@ function htmlCab(titulo,sub,botones){
 /* ------------------------------ estado ------------------------------ */
 
 var E={ ds:null, idx:null, sesion:null, periodo:"dia", dRef:null, semFiltro:"", personaSel:null,
-  pestana:"datos", previo:null, mensaje:null, verComo:"", red:"" };
+  pestana:"datos", previo:null, mensaje:null, verComo:"", red:"", mostrar:null };
 
 function setDs(ds){
   E.ds=ds;
@@ -567,6 +618,7 @@ function refDe(idx,regs,dRef){
 
 function vistaLider(lider,comoAdmin){
   var idx=E.idx;
+  if(idx&&E.mostrar!=null) return vistaCosechador(idx.personas[E.mostrar]);
   if(!idx) return '<div class="pantalla">'+htmlCab("Sin datos","Este archivo no trae la base cargada",'<button class="btn btn-sec" id="salir">Salir</button>')+
     '<div class="vacio">Pide a Yuber el archivo del día.</div></div>';
 
@@ -587,6 +639,9 @@ function vistaLider(lider,comoAdmin){
   var sub=equipo.length+" en cosecha de esquejes"+(excluidos?" · "+excluidos+" activos en otra labor, ocultos":"")+
     " · datos al "+(diasEquipo.length?dmy(idx.msDe(diasEquipo[0])):"—")+(E.red?" · "+E.red:"");
   var s='<div class="pantalla">'+htmlCab(comoAdmin?("Equipo de "+lider):lider,sub,botones);
+
+  /* --- pantalla para mostrar a la persona --- */
+  if(E.mostrar!=null) return vistaCosechador(idx.personas[E.mostrar]);
 
   /* --- detalle de una persona --- */
   if(E.personaSel!=null){
@@ -618,11 +673,12 @@ function vistaLider(lider,comoAdmin){
     '<label class="lblmini" for="fper">Colaborador</label><select id="fper" class="inp inp-mini">'+optPer+'</select>'+
     '</div></div>';
 
+  var mR=metaRend(), mC=metaCal();
   s+='<div class="kpis">'+
-    htmlKpi("Hoy · "+dmy(ref.ms),fInt(kd.r),"esq/h",fInt(kd.esq)+" esquejes · "+f1(kd.hor)+" h · "+kd.n+" registros",true)+
-    htmlKpi("Semana "+(semActiva||"—"),fInt(ks.r),"esq/h",fInt(ks.esq)+" esquejes · conformidad "+fPct(ks.cf))+
-    htmlKpi("Mes · "+MESES[ref.mes]+" "+ref.anio,fInt(km.r),"esq/h",fInt(km.esq)+" esquejes · "+f1(km.hor)+" h")+
-    htmlKpi("Año · ciclo 20"+ref.ciclo,fInt(ka.r),"esq/h",fInt(ka.esq)+" esquejes · conformidad "+fPct(ka.cf))+
+    htmlKpi("Hoy · "+dmy(ref.ms),fInt(kd.r),"esq/h",fInt(kd.esq)+" esquejes · "+f1(kd.hor)+" h · meta "+fInt(mR),true,claseMeta(kd.r,mR))+
+    htmlKpi("Semana "+(semActiva||"—"),fInt(ks.r),"esq/h",fInt(ks.esq)+" esquejes · calidad "+fPct(ks.cf),false,claseMeta(ks.r,mR))+
+    htmlKpi("Calidad de la semana",fPct(ks.cf),"","meta "+fPct(mC)+" · "+(ks.cf!=null&&ks.cf>=mC?"cumple":"por debajo"),false,claseMeta(ks.cf,mC))+
+    htmlKpi("Año · ciclo 20"+ref.ciclo,fInt(ka.r),"esq/h",fInt(ka.esq)+" esquejes · calidad "+fPct(ka.cf),false,claseMeta(ka.r,mR))+
     '</div>';
 
   /* ranking del día */
@@ -681,7 +737,7 @@ function vistaLider(lider,comoAdmin){
     :("Rendimiento por mes · ciclo 20"+ref.ciclo));
   s+='<section class="tarj"><h3 class="tarjtit">'+esc(tituloChart)+
     '<span class="tarjsub">promedio del equipo, esquejes por hora</span></h3>'+
-    svgBarras(serie,{refLinea:ka.r,etiquetaRef:"prom. año equipo"})+'</section>';
+    svgBarras(serie,{refLinea:mR,etiquetaRef:"meta",refLinea2:ka.r,etiquetaRef2:"prom. equipo"})+'</section>';
 
   /* cinta del período */
   var fPer=filtroPeriodo(E.periodo,{d:ref.d,sem:semActiva,anio:ref.anio,mes:ref.mes,ciclo:ref.ciclo});
@@ -700,9 +756,9 @@ function vistaLider(lider,comoAdmin){
   var promPer=agrega(regsEquipo.filter(fPer)).r;
   var etiqPer={dia:"Día",semana:"Semana",mes:"Mes",anual:"Año"}[E.periodo];
   s+='<section class="tarj"><h3 class="tarjtit">Cinta de rendimiento · '+etiqPer+
-    '<span class="tarjsub">'+filasCinta.length+' con registros · promedio del equipo '+fInt(promPer)+
-    ' esq/h (línea fucsia)</span></h3>'+
-    (filasCinta.length?htmlCinta(filasCinta,promPer):'<div class="vacio">Sin registros con horas en este período.</div>')+
+    '<span class="tarjsub">'+filasCinta.length+' con registros · la línea fucsia es la meta de '+fInt(mR)+
+    ' esq/h · promedio del equipo '+fInt(promPer)+'</span></h3>'+
+    (filasCinta.length?htmlCinta(filasCinta,mR):'<div class="vacio">Sin registros con horas en este período.</div>')+
     '</section>';
 
   return s+"</div>";
@@ -730,6 +786,7 @@ function vistaDetalle(persona,equipoRegs){
   var tend=(ra&&rb)?(ra/rb-1):null;
 
   var s='<div class="detcab"><button class="btn btn-sec" id="volverequipo">← Volver al equipo</button>'+
+    '<button class="btn btn-pri btn-mostrar" id="mostrar" data-p="'+persona.i+'">Mostrar a la persona</button>'+
     '<div><div class="detnomtit">'+esc(persona.nom)+'</div>'+
     '<div class="detnomsub">Código '+persona.cod+' · '+esc(persona.labor)+' · líder actual '+esc(persona.lider)+
     (persona.semUlt?" (asignado por la semana "+persona.semUlt+")":"")+'</div></div></div>';
@@ -807,6 +864,75 @@ function vistaDetalle(persona,equipoRegs){
   return s;
 }
 
+/* Pantalla para voltear la tablet y mostrarle a la persona su propio desempeño.
+   Sin ranking, sin otros nombres, números grandes y legibles a plena luz. */
+function vistaCosechador(persona){
+  var idx=E.idx, mR=metaRend(), mC=metaCal();
+  var hist=idx.porPersona.get(persona.i)||[];
+  var conHoras=hist.filter(function(r){ return r.hor>0; });
+  if(!conHoras.length){
+    return '<div class="show"><button class="btn btn-sec show-cerrar" id="cerrarshow">Cerrar</button>'+
+      '<div class="shownom">'+esc(persona.nom)+'</div>'+
+      '<div class="vacio">Esta persona no tiene registros de cosecha con horas.</div></div>';
+  }
+  var ult=conHoras[conHoras.length-1];
+  var dia=agrega(hist.filter(function(r){ return r.d===ult.d; }));
+  var sems=Array.from(new Set(conHoras.map(function(r){ return r.sem; }))).sort(function(a,b){ return b-a; });
+  var semAct=sems[0], semAnt=sems[1];
+  var aSem=agrega(conHoras.filter(function(r){ return r.sem===semAct; }));
+  var aAnt=semAnt?agrega(conHoras.filter(function(r){ return r.sem===semAnt; })):null;
+
+  function bloque(eyebrow,valor,unidad,meta,pie,ok){
+    return '<div class="showcaja '+(ok==null?"s-neutro":(ok?"s-ok":"s-no"))+'">'+
+      '<div class="showeye">'+esc(eyebrow)+'</div>'+
+      '<div class="showval">'+valor+(unidad?'<span class="showun">'+esc(unidad)+'</span>':"")+'</div>'+
+      '<div class="showmeta">'+esc(meta)+'</div>'+
+      '<div class="showpie">'+esc(pie)+'</div></div>';
+  }
+
+  var faltaR=(dia.r!=null)?(mR-dia.r):null;
+  var pieR = dia.r==null?"sin dato":(faltaR<=0?("va "+fInt(-faltaR)+" por encima de la meta"):("le faltan "+fInt(faltaR)+" por hora"));
+  var faltaC=(dia.cf!=null)?(mC-dia.cf):null;
+  var pieC = dia.cf==null?"sin dato":(faltaC<=0?("va "+nf1.format(-faltaC*100)+" puntos por encima"):("le faltan "+nf1.format(faltaC*100)+" puntos"));
+
+  var s='<div class="show">'+
+    '<button class="btn btn-sec show-cerrar" id="cerrarshow">Cerrar</button>'+
+    '<div class="shownom">'+esc(persona.nom)+'</div>'+
+    '<div class="showfecha">Cosecha del '+dmy(ult.ms)+' · semana '+ult.sem+'</div>'+
+    '<div class="showcajas">'+
+      bloque("Esquejes de hoy",fInt(dia.esq),"",f1(dia.hor)+" horas trabajadas","",null)+
+      bloque("Por hora",fInt(dia.r),"esq/h","meta "+fInt(mR),pieR,cumple(dia.r,mR))+
+      bloque("Calidad",fPct(dia.cf),"","meta "+fPct(mC),pieC,cumple(dia.cf,mC))+
+    '</div>';
+
+  if(aAnt&&aAnt.r&&aSem.r){
+    var d=aSem.r/aAnt.r-1;
+    s+='<div class="showcomp '+(d>=0?"s-ok":"s-no")+'">'+
+      (d>=0?"▲ ":"▼ ")+"Esta semana va en "+fInt(aSem.r)+" esq/h. La semana pasada iba en "+fInt(aAnt.r)+
+      ". "+(d>=0?"Subió ":"Bajó ")+nf1.format(Math.abs(d)*100)+"%."+'</div>';
+  } else {
+    s+='<div class="showcomp s-neutro">Esta semana va en '+fInt(aSem.r)+' esq/h.</div>';
+  }
+
+  var desde=ult.d-6, m7=new Map();
+  hist.forEach(function(r){ if(r.d>=desde&&r.d<=ult.d){ if(!m7.has(r.d)) m7.set(r.d,[]); m7.get(r.d).push(r); } });
+  var s7=[];
+  for(var d2=desde;d2<=ult.d;d2++){
+    var l=m7.get(d2), ms=idx.msDe(d2);
+    s7.push({ k:d2, label:DIA_NOMBRE[new Date(ms).getUTCDay()], sub:dm(ms), v:l?agrega(l).r:null, hl:d2===ult.d });
+  }
+  s+='<div class="showchart"><div class="showeye">Sus últimos 7 días · esquejes por hora</div>'+
+    svgBarras(s7,{refLinea:mR,etiquetaRef:"meta"})+'</div>';
+  s+='<div class="showcalidad"><div class="showeye">Calidad de sus últimos días</div><div class="showpuntos">';
+  s7.forEach(function(x){
+    var l=m7.get(x.k), cf=l?agrega(l).cf:null;
+    s+='<div class="showpunto '+(cf==null?"s-neutro":(cf>=mC?"s-ok":"s-no"))+'">'+
+      '<span class="showpdia">'+x.sub+'</span><span class="showpval">'+(cf==null?"—":fPct(cf))+'</span></div>';
+  });
+  s+='</div></div></div>';
+  return s;
+}
+
 function vistaAdmin(){
   var idx=E.idx;
   var sub=idx?(fInt(idx.meta.registros)+" registros · "+fInt(idx.personas.length)+" personas · semanas "+
@@ -837,6 +963,13 @@ function vistaAdmin(){
       '<button class="btn btn-pri" id="expjson"'+(E.ds?"":" disabled")+'>Descargar datos.json para subir</button>'+
       '<button class="btn btn-sec" id="exphtml"'+(E.ds?"":" disabled")+'>Descargar tablero completo (.html)</button>'+
       '<p class="nota">Sube <b>datos.json</b> al sitio reemplazando el anterior. Los líderes lo ven al abrir su ícono. El .html completo es solo respaldo.</p>'+
+      '<div class="eyebrow">Metas de la finca</div>'+
+      '<div class="metas"><label class="lblmini" for="metar">esq/h</label>'+
+      '<input class="inp inp-mini" id="metar" type="number" min="1" value="'+metaRend()+'">'+
+      '<label class="lblmini" for="metac">calidad %</label>'+
+      '<input class="inp inp-mini" id="metac" type="number" min="1" max="100" step="0.5" value="'+(metaCal()*100)+'">'+
+      '<button class="btn btn-mini" id="guardarmetas">Guardar</button></div>'+
+      '<p class="nota">Se guardan dentro de datos.json y viajan al sitio con la próxima subida.</p>'+
       '<div class="eyebrow">Estado</div><p class="nota">Guardado: <b>'+esc(almacen.modo)+'</b><br>Última actualización: <b>'+
       (E.ds&&E.ds.meta&&(E.ds.meta.actualizado||E.ds.meta.generado)
         ? new Date(E.ds.meta.actualizado||E.ds.meta.generado).toLocaleString("es-CO") : "—")+'</b></p>'+
@@ -993,6 +1126,8 @@ function conectar(){
   on("salir","click",function(){ E.sesion=null; E.verComo=""; E.personaSel=null; render(); });
   on("volveradmin","click",function(){ E.verComo=""; E.personaSel=null; render(); });
   on("volverequipo","click",function(){ E.personaSel=null; render(); });
+  on("mostrar","click",function(e){ E.mostrar=+e.currentTarget.getAttribute("data-p"); render(); });
+  on("cerrarshow","click",function(){ E.mostrar=null; render(); });
 
   document.querySelectorAll("[data-periodo]").forEach(function(b){
     b.addEventListener("click",function(){ E.periodo=b.getAttribute("data-periodo"); render(); });
@@ -1019,6 +1154,16 @@ function conectar(){
   on("reemplazar","click",function(){ aplicar("reemplazar"); });
   on("limpiar","click",function(){ E.previo=null; E.mensaje=null; render(); });
   on("filearch","change",function(e){ leerArchivo(e,function(t){ validarTexto(t); }); });
+  on("guardarmetas","click",function(){
+    if(!E.ds) return;
+    var r=+document.getElementById("metar").value, c=+document.getElementById("metac").value;
+    if(!(r>0)||!(c>0&&c<=100)){ alert("Revisa las metas: rendimiento en esquejes por hora y calidad en porcentaje."); return; }
+    E.ds.meta.metaRend=Math.round(r);
+    E.ds.meta.metaCal=c/100;
+    var g=guardar(E.ds);
+    E.mensaje={tipo:"ok",txt:"Metas guardadas: "+fInt(r)+" esq/h y "+nf1.format(c)+"% de calidad. Sube datos.json para que los líderes las vean."+(g.ok?"":" No se pudo guardar localmente.")};
+    render();
+  });
   on("exphtml","click",exportarTablero);
   on("expjson","click",function(){
     descargar(JSON.stringify(E.ds),"datos.json");

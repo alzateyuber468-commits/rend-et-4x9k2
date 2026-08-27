@@ -31,6 +31,7 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .marcatit{font-size:18px;font-weight:680;letter-spacing:-.015em}
 .marcasub{font-size:12px;color:var(--muted)}
 .loginpie{margin-top:14px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+.versionpie{margin-top:6px;font-size:10.5px;color:#B7BDC9;text-align:center}
 .lbl{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:12px 0 5px}
 .lblmini{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
 .inp{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;font:inherit;color:var(--ink)}
@@ -233,6 +234,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
+var VERSION_TABLERO = "2026-08-27 18:16"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -752,6 +754,7 @@ function vistaLogin(){
     '<div class="loginpie">'+(meta
       ? "Datos hasta "+dmy(parseFecha(meta.fechaMax))+" · "+fInt(meta.registros)+" registros · "+fInt(meta.personas)+" personas"
       : "Este archivo no tiene datos cargados. Entra como administrador para cargarlos.")+'</div>'+
+    '<div class="versionpie">Tablero versión '+esc(VERSION_TABLERO)+'</div>'+
     '</div></div>';
 }
 
@@ -1347,7 +1350,7 @@ function vistaAdmin(){
       '<input class="inp inp-mini" id="metad" type="number" min="7" max="180" step="7" value="'+diasDormido()+'">'+
       '<button class="btn btn-mini" id="guardarmetas">Guardar</button></div>'+
       '<p class="nota">Se guardan dentro de datos.json y viajan al sitio con la próxima subida.</p>'+
-      '<div class="eyebrow">Estado</div><p class="nota">Guardado: <b>'+esc(almacen.modo)+'</b><br>Última actualización: <b>'+
+      '<div class="eyebrow">Estado</div><p class="nota">Versión de este archivo: <b>'+esc(VERSION_TABLERO)+'</b><br>Guardado: <b>'+esc(almacen.modo)+'</b><br>Última actualización: <b>'+
       (E.ds&&E.ds.meta&&(E.ds.meta.actualizado||E.ds.meta.generado)
         ? new Date(E.ds.meta.actualizado||E.ds.meta.generado).toLocaleString("es-CO") : "—")+'</b></p>'+
       '</div></div>';

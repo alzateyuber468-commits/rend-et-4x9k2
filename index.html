@@ -71,6 +71,7 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .cintafila:hover{background:#F3F5FB}
 .cintanom{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cintapista{position:relative;height:15px;background:#E8EBF2;border-radius:4px;overflow:hidden}
+.cintapista.cintasinhoras{display:flex;align-items:center;padding-left:8px;font-size:11.5px;color:var(--bajo);font-weight:600;background:#FDF1E9}
 .cintabarra{position:absolute;top:0;bottom:0;left:0;border-radius:4px}
 .cintabarra.t-alto{background:var(--deep2)}
 .cintabarra.t-medio{background:#8D9AB5}
@@ -399,6 +400,18 @@ function fusionar(dsBase,dsNuevo){
   return { ds:construirDesdeFilas(Array.from(mapa.values())), nuevos:nuevos, reemplazados:reemplazados };
 }
 
+/* Metas, usuarios y ajustes no viven en las filas del Excel: hay que
+   trasladarlos a mano cada vez que se reconstruye la base. */
+var CLAVES_CONFIG=["metaRend","metaCal","diasDormido","usuarios","pinAdmin"];
+function heredarConfig(dsNuevo,dsViejo){
+  if(!dsNuevo||!dsNuevo.meta) return dsNuevo;
+  var vieja=(dsViejo&&dsViejo.meta)?dsViejo.meta:{};
+  CLAVES_CONFIG.forEach(function(k){
+    if(dsNuevo.meta[k]==null&&vieja[k]!=null) dsNuevo.meta[k]=vieja[k];
+  });
+  return dsNuevo;
+}
+
 function indexar(ds){
   if(!ds||!ds.regs) return null;
   var baseMs=parseFecha(ds.meta.base);
@@ -451,11 +464,16 @@ function indexar(ds){
   };
 }
 
+/* Todo registro con esquejes cuenta en el total, tenga o no horas: si faltan
+   horas, esos esquejes suben el rendimiento del período en vez de perderse,
+   que es justamente la señal de que hay que corregir la digitación.
+   Si hay horas y cero esquejes, sí bajan el rendimiento: puede ser un día
+   real sin cosecha o esquejes sin digitar, y también debe verse. */
 function agrega(lista){
   var esq=0,hor=0,cfs=0,ncf=0,n=0;
   for(var i=0;i<lista.length;i++){
     var r=lista[i];
-    if(!(r.hor>0)) continue;
+    if(r.esq<=0&&!(r.hor>0)) continue; // fila realmente vacía
     esq+=r.esq; hor+=r.hor; n++;
     if(r.cf!=null&&r.cf>0){ cfs+=r.cf; ncf++; }
   }
@@ -627,6 +645,15 @@ function htmlCinta(filas,modo){
     '<span class="der">'+(esCal?"Calidad":"esq/h")+'</span>'+
     '<span class="der">'+(esCal?"esq/h":"Calidad")+'</span><span class="der">vs meta</span></div>';
   filas.forEach(function(f){
+    if(f.sinHoras){
+      s+='<button class="cintafila" data-persona="'+f.k+'">'+
+        '<span class="cintanom" title="'+esc(f.nom)+'">'+esc(corto(f.nom))+'</span>'+
+        '<span class="cintapista cintasinhoras">'+fInt(f.esq)+' esquejes sin horas registradas</span>'+
+        '<span class="cintaval">—</span>'+
+        '<span class="cintacal">'+chipCal(f.cf,mC)+'</span>'+
+        '<span class="cintadif">falta hora</span></button>';
+      return;
+    }
     var base=esCal?(f.cf==null?null:f.cf*100):f.v;
     var meta=esCal?mC*100:mR;
     var pct=Math.max(0,Math.min(100,((base||0)/tope)*100));
@@ -849,7 +876,8 @@ function vistaLider(lider,comoAdmin){
   var fPer=filtroPeriodo(E.periodo,{d:ref.d,sem:semActiva,anio:ref.anio,mes:ref.mes,ciclo:ref.ciclo});
   var acc=new Map();
   regsEquipo.forEach(function(r){
-    if(!fPer(r)||!(r.hor>0)) return;
+    if(!fPer(r)) return;
+    if(r.esq<=0&&!(r.hor>0)) return; // fila realmente vacía
     if(!acc.has(r.p)) acc.set(r.p,{esq:0,hor:0,cf:0,ncf:0,n:0});
     var a=acc.get(r.p); a.esq+=r.esq; a.hor+=r.hor; a.n++;
     if(r.cf!=null&&r.cf>0){ a.cf+=r.cf; a.ncf++; }
@@ -859,7 +887,10 @@ function vistaLider(lider,comoAdmin){
   var todasFilas=[], sinRegistro=[], dormidos=[];
   equipo.forEach(function(p){
     var a=acc.get(p.i);
-    if(a&&a.hor>0){ todasFilas.push({ k:p.i, nom:p.nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n }); return; }
+    /* Esquejes sin horas: el rendimiento sube en vez de desaparecer,
+       para que salte a la vista que falta digitar la hora. */
+    if(a&&a.esq>0&&a.hor>0){ todasFilas.push({ k:p.i, nom:p.nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n }); return; }
+    if(a&&a.esq>0&&!(a.hor>0)){ todasFilas.push({ k:p.i, nom:p.nom, v:null, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n, sinHoras:true }); return; }
     if(dormido(p)) dormidos.push(p); else sinRegistro.push(p);
   });
   var cuenta={ambas:0,solo_r:0,solo_c:0,ninguna:0};
@@ -941,13 +972,14 @@ function vistaLider(lider,comoAdmin){
   /* --- podios, al final para no estorbar en el informe --- */
   var accD=new Map();
   regsEquipo.forEach(function(r){
-    if(r.d!==ref.d||!(r.hor>0)) return;
+    if(r.d!==ref.d) return;
+    if(r.esq<=0&&!(r.hor>0)) return;
     if(!accD.has(r.p)) accD.set(r.p,{esq:0,hor:0,cf:0,ncf:0});
     var a=accD.get(r.p); a.esq+=r.esq; a.hor+=r.hor;
     if(r.cf!=null&&r.cf>0){ a.cf+=r.cf; a.ncf++; }
   });
   var rankDia=[];
-  accD.forEach(function(a,p){ rankDia.push({ k:p, nom:idx.personas[p].nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null }); });
+  accD.forEach(function(a,p){ if(a.hor>0) rankDia.push({ k:p, nom:idx.personas[p].nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null }); });
   if(esCal) rankDia=rankDia.filter(function(x){ return x.cf!=null; }).sort(function(a,b){ return b.cf-a.cf; });
   else rankDia.sort(function(a,b){ return b.v-a.v; });
   s+='<div class="rejilla2">'+
@@ -1321,6 +1353,35 @@ function vistaAdmin(){
     s+='</section>';
 
     if(idx){
+      /* --- cierre de año y depuración --- */
+      var porCiclo=new Map();
+      idx.regs.forEach(function(r){
+        if(!porCiclo.has(r.ciclo)) porCiclo.set(r.ciclo,{n:0,personas:new Set(),esq:0});
+        var a=porCiclo.get(r.ciclo); a.n++; a.personas.add(r.p); a.esq+=r.esq;
+      });
+      var ciclos=Array.from(porCiclo.keys()).sort(function(a,b){ return b-a; });
+      var pesoTotal=JSON.stringify(E.ds).length;
+      var filasC="";
+      ciclos.forEach(function(c){
+        var a=porCiclo.get(c);
+        filasC+='<tr><td>Ciclo 20'+c+'</td><td class="num">'+fInt(a.n)+'</td>'+
+          '<td class="num">'+fInt(a.personas.size)+'</td><td class="num">'+fInt(a.esq)+'</td>'+
+          '<td class="num">'+(pesoTotal*a.n/idx.regs.length/1048576).toFixed(2)+' MB</td>'+
+          '<td><button class="btn btn-mini" data-respaldo="'+c+'">Descargar respaldo</button></td></tr>';
+      });
+      s+='<section class="tarj"><h3 class="tarjtit">Cierre de año y depuración'+
+        '<span class="tarjsub">base actual: '+(pesoTotal/1048576).toFixed(2)+' MB · el límite práctico para trabajar sin señal es 5 MB</span></h3>'+
+        '<div class="tablabox"><table class="tabla"><thead><tr><th>Ciclo</th><th class="num">Registros</th>'+
+        '<th class="num">Personas</th><th class="num">Esquejes</th><th class="num">Peso</th><th>Respaldo</th></tr></thead>'+
+        '<tbody>'+filasC+'</tbody></table></div>'+
+        '<div class="metas" style="margin-top:12px"><label class="lblmini" for="nciclos">Conservar en el tablero</label>'+
+        '<select class="inp inp-mini" id="nciclos">'+[1,2,3,4,5].map(function(n){
+          return '<option value="'+n+'"'+(n===2?" selected":"")+'>'+(n===1?"solo el ciclo en curso":"los últimos "+n+" ciclos")+'</option>';
+        }).join("")+'</select>'+
+        '<button class="btn btn-mini" id="depurar">Depurar base</button></div>'+
+        '<p class="nota">Descarga primero el respaldo de los ciclos que vas a sacar. La depuración elimina esos registros '+
+        'del tablero, no del Excel, y conserva las metas, los usuarios y los PIN.</p></section>';
+
       var al=[];
       var sinHoras=idx.regs.filter(function(r){ return !(r.hor>0); }).length;
       if(sinHoras) al.push(fInt(sinHoras)+" registros sin horas: se excluyen de todo cálculo de rendimiento.");
@@ -1488,6 +1549,7 @@ function aplicar(modo){
     dsFinal=f.ds;
     detalle=fInt(f.nuevos)+" nuevos, "+fInt(f.reemplazados)+" corregidos, base en "+fInt(f.ds.meta.registros)+" registros";
   }
+  heredarConfig(dsFinal,E.ds); // conserva metas, usuarios y PIN
   var r=guardar(dsFinal);
   E.previo=null;
   E.mensaje={ tipo:"ok", txt:(modo==="fusionar"?"Base fusionada":"Base reemplazada")+": "+detalle+" ("+
@@ -1618,6 +1680,34 @@ function conectar(){
     E.ds.meta.pinAdmin=val;
     guardar(E.ds);
     E.mensaje={tipo:"ok",txt:"Tu PIN de administrador es ahora "+val+". Anótalo: si lo olvidas hay que volver a subir el index.html."};
+    render();
+  });
+  document.querySelectorAll("[data-respaldo]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var c=+b.getAttribute("data-respaldo");
+      var filas=expandir(E.ds).filter(function(f){ return Math.floor(f.sem/100)===c; });
+      if(!filas.length){ alert("No hay registros de ese ciclo."); return; }
+      var ds2=heredarConfig(construirDesdeFilas(filas),E.ds);
+      ds2.meta.respaldoDe="ciclo 20"+c;
+      descargar(JSON.stringify(ds2),"datos-20"+c+"-cierre.json");
+    });
+  });
+  on("depurar","click",function(){
+    var n=+document.getElementById("nciclos").value;
+    var ciclos=Array.from(new Set(E.idx.regs.map(function(r){ return r.ciclo; }))).sort(function(a,b){ return b-a; });
+    var conservar=ciclos.slice(0,n);
+    var fuera=ciclos.slice(n);
+    if(!fuera.length){ alert("La base solo tiene "+ciclos.length+" ciclo(s). No hay nada que depurar."); return; }
+    var filas=expandir(E.ds);
+    var quedan=filas.filter(function(f){ return conservar.indexOf(Math.floor(f.sem/100))>=0; });
+    var msg="Se van a eliminar del tablero los ciclos "+fuera.map(function(c){ return "20"+c; }).join(", ")+
+      ": "+fInt(filas.length-quedan.length)+" registros.\n\nQuedan "+fInt(quedan.length)+" registros de "+
+      conservar.map(function(c){ return "20"+c; }).join(", ")+".\n\n¿Descargaste ya los respaldos? Esta acción no se puede deshacer sin ellos.";
+    if(!confirm(msg)) return;
+    var ds2=heredarConfig(construirDesdeFilas(quedan),E.ds);
+    var g=guardar(ds2);
+    E.mensaje={tipo:"ok",txt:"Base depurada: "+fInt(quedan.length)+" registros, "+(g.bytes/1048576).toFixed(2)+
+      " MB. Descarga datos.json y súbelo al sitio para que los líderes vean la base depurada."};
     render();
   });
   on("guardarmetas","click",function(){

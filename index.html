@@ -234,7 +234,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 19:05"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-08-27 19:40"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -490,6 +490,29 @@ function filtroPeriodo(periodo,ref){
   return function(r){ return r.ciclo===ref.ciclo; };
 }
 
+/* Variante simple: claves disponibles de un período dentro de una lista de
+   registros, un filtro por esa clave, y su etiqueta para mostrar. Se usa
+   en la pestaña general del panel, donde no hay una sola persona de fondo. */
+function clavesDe(regs,per){
+  var f=(per==="dia")?function(r){ return r.d; }
+    :(per==="semana")?function(r){ return r.sem; }
+    :(per==="mes")?function(r){ return r.anio*12+r.mes; }
+    :function(r){ return r.ciclo; };
+  return Array.from(new Set(regs.map(f))).sort(function(a,b){ return b-a; });
+}
+function filtroClave(per,clave){
+  if(per==="dia") return function(r){ return r.d===clave; };
+  if(per==="semana") return function(r){ return r.sem===clave; };
+  if(per==="mes") return function(r){ return r.anio*12+r.mes===clave; };
+  return function(r){ return r.ciclo===clave; };
+}
+function etiquetaPeriodo(per,c){
+  if(per==="dia") return dmy(E.idx.msDe(c));
+  if(per==="semana") return "Semana "+c;
+  if(per==="mes") return MESES[c%12]+" "+Math.floor(c/12);
+  return "Ciclo 20"+c;
+}
+
 /* ------------------------------ lectura de texto pegado ------------------------------ */
 
 function detectarSeparador(linea){
@@ -702,7 +725,7 @@ function htmlCab(titulo,sub,botones){
 var E={ ds:null, idx:null, sesion:null, periodo:"dia", dRef:null, semFiltro:"", personaSel:null,
   pestana:"datos", previo:null, mensaje:null, verComo:"", red:"", mostrar:null,
   vista:"rend", orden:"apellido", cump:"todos", detPeriodo:"dia", detClave:null,
-  estadoFiltro:"activos", buscarPersona:"",
+  estadoFiltro:"activos", buscarPersona:"", adminPersonaSel:null,
   mesFiltro:"", anioFiltro:"", showPeriodo:"dia", showClave:null };
 
 function setDs(ds){
@@ -1423,7 +1446,7 @@ function vistaAdmin(){
         var pp=idx.equipos.get(l)||[];
         return pp.some(function(x){ return x.activo&&x.cosecha; });
       });
-      if(fuera.length) al.push("Líderes con cosecheros activos y sin usuario para entrar: "+fuera.join(", ")+
+      if(fuera.length) al.push("Líderes con cosechadores activos y sin usuario para entrar: "+fuera.join(", ")+
         ". Créalos en la pestaña Usuarios y PIN.");
       s+='<section class="tarj"><h3 class="tarjtit">Revisión de calidad de la base'+
         '<span class="tarjsub">lo que conviene corregir en el origen</span></h3>'+
@@ -1434,17 +1457,50 @@ function vistaAdmin(){
 
   if(E.pestana==="general"){
     if(!idx) return s+'<div class="vacio">Carga primero los datos.</div></div>';
-    var ult=idx.diasOrd[0], semUlt=idx.semOrd[0];
-    var hoy=agrega(idx.regs.filter(function(r){ return r.d===ult; }));
-    var sem=agrega(idx.regs.filter(function(r){ return r.sem===semUlt; }));
+
+    /* --- detalle de una persona, abierto desde el buscador --- */
+    if(E.adminPersonaSel!=null){
+      var persona=idx.personas[E.adminPersonaSel];
+      var grupo, regsGrupo=[];
+      if(persona.cosecha){
+        grupo=(idx.equipos.get(persona.lider)||[]).filter(function(p){ return p.cosecha; });
+      } else {
+        grupo=idx.personas.filter(function(p){ return p.labor===persona.labor; });
+      }
+      if(!grupo.length) grupo=[persona];
+      grupo.forEach(function(p){ var h=idx.porPersona.get(p.i); if(h) regsGrupo=regsGrupo.concat(h); });
+      s+='<button class="btn btn-sec" id="volveradminpersona" style="margin-bottom:12px">← Volver a la búsqueda</button>';
+      s+=vistaDetalle(persona,regsGrupo,grupo);
+      return s+"</div>";
+    }
+
+    /* --- filtros de período para toda la pestaña general --- */
+    var perG=E.generalPeriodo||"dia";
+    var listaG=clavesDe(idx.regs,perG);
+    var claveG=(E.generalClave!=null&&listaG.indexOf(E.generalClave)>=0)?E.generalClave:listaG[0];
+    var filtroG=filtroClave(perG,claveG);
+    var etiqG=etiquetaPeriodo(perG,claveG);
+
+    var ult=idx.diasOrd[0];
+    var periodo=agrega(idx.regs.filter(filtroG));
     var tot=agrega(idx.regs);
     var activos=idx.personas.filter(function(p){ return p.activo; }).length;
-    var cosecheros=idx.personas.filter(function(p){ return p.activo&&p.cosecha; }).length;
+    var cosechadores=idx.personas.filter(function(p){ return p.activo&&p.cosecha; }).length;
+
+    s+='<div class="barrafiltros"><div class="grupo">'+
+      [["dia","Día"],["semana","Semana"],["mes","Mes"],["anual","Año"]].map(function(x){
+        return '<button class="chip'+(perG===x[0]?" chip-on":"")+'" data-genper="'+x[0]+'">'+x[1]+'</button>';
+      }).join("")+'</div><div class="grupo">'+
+      '<label class="lblmini" for="fgenclave">'+(perG==="dia"?"Fecha":perG==="semana"?"Semana":perG==="mes"?"Mes":"Ciclo")+'</label>'+
+      '<select id="fgenclave" class="inp inp-mini">'+listaG.slice(0,240).map(function(c){
+        return '<option value="'+c+'"'+(c===claveG?" selected":"")+'>'+esc(etiquetaPeriodo(perG,c))+'</option>';
+      }).join("")+'</select></div></div>';
+
     s+='<div class="kpis">'+
-      htmlKpi("Finca · "+dmy(idx.msDe(ult)),fInt(hoy.r),"esq/h",fInt(hoy.esq)+" esquejes · "+hoy.n+" registros",true)+
-      htmlKpi("Semana "+semUlt,fInt(sem.r),"esq/h",fInt(sem.esq)+" esquejes · conformidad "+fPct(sem.cf))+
-      htmlKpi("Acumulado de la base",fInt(tot.r),"esq/h",fInt(tot.esq)+" esquejes · "+f1(tot.hor)+" horas")+
-      htmlKpi("Cosecheros activos",fInt(cosecheros),"de "+activos,"activos en cosecha / total activos")+
+      htmlKpi("Finca · "+esc(etiqG),fInt(periodo.r),"esq/h",fInt(periodo.esq)+" esquejes · calidad "+fPct(periodo.cf),true)+
+      htmlKpi("Acumulado de toda la base",fInt(tot.r),"esq/h",fInt(tot.esq)+" esquejes · "+f1(tot.hor)+" horas")+
+      htmlKpi("Cosechadores activos",fInt(cosechadores),"de "+activos,"activos en cosecha / total activos")+
+      htmlKpi("Última fecha con datos",dmy(idx.msDe(ult)),"",fInt(idx.meta.registros)+" registros en la base")+
       '</div>';
 
     /* --- por líder: solo su equipo de cosecha, sin mezclar apoyos --- */
@@ -1455,23 +1511,22 @@ function vistaAdmin(){
       var regs=[];
       act.forEach(function(p){ var h=idx.porPersona.get(p.i); if(h) regs=regs.concat(h); });
       arr.push({ lider:lider, act:act.length, an:agrega(regs),
-        hoy:agrega(regs.filter(function(r){ return r.d===ult; })),
+        per:agrega(regs.filter(filtroG)),
         oficial:tieneUsuario(lider) });
     });
     arr=arr.filter(function(l){ return l.act>0||l.oficial; });
-    arr.sort(function(a,b){ return (b.an.r||0)-(a.an.r||0); });
+    arr.sort(function(a,b){ return (b.per.r||0)-(a.per.r||0); });
     arr.forEach(function(l){
       filas+='<tr><td>'+esc(l.lider)+(l.oficial?"":'<span class="tag">sin usuario</span>')+'</td>'+
         '<td class="num">'+fInt(l.act)+'</td>'+
-        '<td class="num">'+fInt(l.hoy.r)+'</td><td class="num fuerte">'+fInt(l.an.r)+'</td>'+
-        '<td class="num">'+fInt(l.an.esq)+'</td><td class="num">'+fPct(l.an.cf)+'</td>'+
+        '<td class="num fuerte">'+fInt(l.per.r)+'</td><td class="num">'+fPct(l.per.cf)+'</td>'+
+        '<td class="num">'+fInt(l.an.r)+'</td>'+
         '<td><button class="btn btn-mini" data-vercomo="'+esc(l.lider)+'">Abrir</button></td></tr>';
     });
     s+='<section class="tarj"><h3 class="tarjtit">Rendimiento por equipo de cosecha'+
-      '<span class="tarjsub">solo personas activas en labor COSECHA, asignadas por su semana de cosecha más reciente. Los apoyos no entran aquí.</span></h3>'+
-      '<div class="tablabox"><table class="tabla"><thead><tr><th>Líder</th><th class="num">Cosecheros</th>'+
-      '<th class="num">Último día</th><th class="num">Acumulado</th>'+
-      '<th class="num">Esquejes</th><th class="num">Conformidad</th><th></th></tr></thead><tbody>'+filas+
+      '<span class="tarjsub">'+esc(etiqG)+' · solo personas activas en labor COSECHA. Los apoyos no entran aquí.</span></h3>'+
+      '<div class="tablabox"><table class="tabla"><thead><tr><th>Líder</th><th class="num">Cosechadores</th>'+
+      '<th class="num">'+esc(etiqG)+'</th><th class="num">Calidad</th><th class="num">Acumulado año</th><th></th></tr></thead><tbody>'+filas+
       '</tbody></table></div></section>';
 
     /* --- apoyos: un solo grupo aparte, por labor, sin mezclar con ningún líder --- */
@@ -1485,16 +1540,15 @@ function vistaAdmin(){
     Array.from(porLabor.keys()).sort(function(a,b){ return a.localeCompare(b,"es"); }).forEach(function(lab){
       var ps=porLabor.get(lab);
       var regs=[]; ps.forEach(function(p){ var h=idx.porPersona.get(p.i); if(h) regs=regs.concat(h); });
-      var an=agrega(regs), hoyA=agrega(regs.filter(function(r){ return r.d===ult; }));
+      var an=agrega(regs), perA=agrega(regs.filter(filtroG));
       filasA+='<tr><td>'+esc(lab)+'</td><td class="num">'+fInt(ps.length)+'</td>'+
-        '<td class="num">'+fInt(hoyA.r)+'</td><td class="num fuerte">'+fInt(an.r)+'</td>'+
-        '<td class="num">'+fInt(an.esq)+'</td><td class="num">'+fPct(an.cf)+'</td></tr>';
+        '<td class="num fuerte">'+fInt(perA.r)+'</td><td class="num">'+fPct(perA.cf)+'</td>'+
+        '<td class="num">'+fInt(an.r)+'</td></tr>';
     });
     s+='<section class="tarj"><h3 class="tarjtit">Apoyos, aparte de la base de cosecha'+
-      '<span class="tarjsub">'+fInt(apoyos.length)+' personas activas en labores distintas a cosecha, agrupadas por su labor · no pertenecen al equipo de ningún líder para efectos de rendimiento</span></h3>'+
+      '<span class="tarjsub">'+fInt(apoyos.length)+' personas activas en labores distintas a cosecha, agrupadas por su labor · '+esc(etiqG)+'</span></h3>'+
       (filasA?('<div class="tablabox"><table class="tabla"><thead><tr><th>Labor</th><th class="num">Personas</th>'+
-        '<th class="num">Último día</th><th class="num">Acumulado</th>'+
-        '<th class="num">Esquejes</th><th class="num">Conformidad</th></tr></thead><tbody>'+filasA+'</tbody></table></div>')
+        '<th class="num">'+esc(etiqG)+'</th><th class="num">Calidad</th><th class="num">Acumulado año</th></tr></thead><tbody>'+filasA+'</tbody></table></div>')
         :'<div class="vacio">Sin personas en apoyos.</div>')+'</section>';
 
     var serieS=idx.semOrd.slice(0,20).reverse().map(function(x){
@@ -1525,7 +1579,7 @@ function vistaAdmin(){
         '<td>'+esc(p.labor)+(p.cosecha?"":'<span class="tag">apoyo</span>')+'</td>'+
         '<td>'+esc(p.lider)+'</td>'+
         '<td>'+(ult2?dmy(ult2.ms):"—")+'</td>'+
-        '<td><button class="btn btn-mini" data-vercomo="'+esc(p.lider)+'">Ver equipo</button></td></tr>';
+        '<td><button class="btn btn-mini" data-verpersona="'+p.i+'">Ver detalle</button></td></tr>';
     });
     s+='<section class="tarj"><h3 class="tarjtit">Buscar personas'+
       '<span class="tarjsub">activas, retiradas, o todas · '+fInt(listaP.length)+' encontradas'+
@@ -1597,6 +1651,7 @@ function vistaAdmin(){
 function render(){
   var root=document.getElementById("root");
   if(!E.sesion) root.innerHTML=vistaLogin();
+  else if(E.idx&&E.mostrar!=null) root.innerHTML=vistaCosechador(E.idx.personas[E.mostrar]);
   else if(E.sesion.tipo==="admin"&&!E.verComo) root.innerHTML=vistaAdmin();
   else if(E.sesion.tipo==="apoyos") root.innerHTML=vistaLider("__APOYOS__",false);
   else root.innerHTML=vistaLider(E.verComo||E.sesion.lider,!!E.verComo);
@@ -1746,6 +1801,17 @@ function conectar(){
       render();
     });
   });
+  document.querySelectorAll("[data-genper]").forEach(function(b){
+    b.addEventListener("click",function(){ E.generalPeriodo=b.getAttribute("data-genper"); E.generalClave=null; render(); });
+  });
+  on("fgenclave","change",function(e){ E.generalClave=+e.target.value; render(); });
+  document.querySelectorAll("[data-verpersona]").forEach(function(b){
+    b.addEventListener("click",function(){
+      E.adminPersonaSel=+b.getAttribute("data-verpersona");
+      E.detPeriodo="dia"; E.detClave=null; render();
+    });
+  });
+  on("volveradminpersona","click",function(){ E.adminPersonaSel=null; render(); });
   document.querySelectorAll("[data-estado]").forEach(function(b){
     b.addEventListener("click",function(){ E.estadoFiltro=b.getAttribute("data-estado"); render(); });
   });

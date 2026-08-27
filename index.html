@@ -121,6 +121,8 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .sinreg{margin-top:12px;font-size:12.5px;color:var(--muted);background:#F5F7FC;border:1px dashed var(--line);border-radius:9px;padding:9px 11px;line-height:1.5}
 .sinreg b{color:var(--ink)}
 .sinreg.dormidos{background:#FDF6EC;border-color:#EEDCC2;border-style:solid}
+.sinreg.aviso{background:#FDF1E9;border-color:#EFD8C6;border-style:solid;color:#8A3C10}
+.sinreg.aviso b{color:#8A3C10}
 
 /* barra de metas y KPI doble */
 .metasbarra{font-size:12.5px;color:var(--muted);margin:-4px 0 10px;padding:7px 11px;background:#FFF9DB;border:1px solid #F0DC96;border-radius:9px}
@@ -878,8 +880,10 @@ function vistaLider(lider,comoAdmin){
   regsEquipo.forEach(function(r){
     if(!fPer(r)) return;
     if(r.esq<=0&&!(r.hor>0)) return; // fila realmente vacía
-    if(!acc.has(r.p)) acc.set(r.p,{esq:0,hor:0,cf:0,ncf:0,n:0});
+    if(!acc.has(r.p)) acc.set(r.p,{esq:0,hor:0,cf:0,ncf:0,n:0,faltaHora:false,faltaEsq:false});
     var a=acc.get(r.p); a.esq+=r.esq; a.hor+=r.hor; a.n++;
+    if(r.esq>0&&!(r.hor>0)) a.faltaHora=true;
+    if(r.hor>0&&r.esq<=0) a.faltaEsq=true;
     if(r.cf!=null&&r.cf>0){ a.cf+=r.cf; a.ncf++; }
   });
   var ultBase=idx.diasOrd.length?idx.diasOrd[0]:0, umbral=diasDormido();
@@ -889,8 +893,8 @@ function vistaLider(lider,comoAdmin){
     var a=acc.get(p.i);
     /* Esquejes sin horas: el rendimiento sube en vez de desaparecer,
        para que salte a la vista que falta digitar la hora. */
-    if(a&&a.esq>0&&a.hor>0){ todasFilas.push({ k:p.i, nom:p.nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n }); return; }
-    if(a&&a.esq>0&&!(a.hor>0)){ todasFilas.push({ k:p.i, nom:p.nom, v:null, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n, sinHoras:true }); return; }
+    if(a&&a.esq>0&&a.hor>0){ todasFilas.push({ k:p.i, nom:p.nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n, aviso:(a.faltaHora?"falta_hora":(a.faltaEsq?"falta_esq":null)) }); return; }
+    if(a&&a.esq>0&&!(a.hor>0)){ todasFilas.push({ k:p.i, nom:p.nom, v:null, cf:a.ncf?a.cf/a.ncf:null, esq:a.esq, dias:a.n, sinHoras:true, aviso:"falta_hora" }); return; }
     if(dormido(p)) dormidos.push(p); else sinRegistro.push(p);
   });
   var cuenta={ambas:0,solo_r:0,solo_c:0,ninguna:0};
@@ -910,6 +914,7 @@ function vistaLider(lider,comoAdmin){
   else if(E.orden==="cal") filas.sort(function(a,b){ return (b.cf==null?-1:b.cf)-(a.cf==null?-1:a.cf); });
   else filas.sort(function(a,b){ return a.nom.localeCompare(b.nom,"es"); });
 
+  var conAviso=todasFilas.filter(function(f){ return f.aviso; });
   var etiqPer={dia:"del día",semana:"de la semana",mes:"del mes",anual:"del año"}[E.periodo];
   var grupos=[["todos","Todos",todasFilas.length],["ambas","Cumplen las dos",cuenta.ambas],
     ["solo_r","Solo rendimiento",cuenta.solo_r],["solo_c","Solo calidad",cuenta.solo_c],
@@ -934,6 +939,12 @@ function vistaLider(lider,comoAdmin){
       Math.round(umbral/7)+' semanas:</b> '+dormidos.sort(function(a,b){ return (a.dUlt||0)-(b.dUlt||0); }).map(function(p){
         return esc(corto(p.nom))+" ("+(p.dUlt==null?"sin registros":(ultBase-p.dUlt)+" días)");
       }).join(" · ")+'. Siguen como LABORANDO en el maestro. Revisa si ya salieron o cambiaron de labor.</div>'):"")+
+    (conAviso.length?('<div class="sinreg aviso"><b>⚠ '+conAviso.length+' con un dato faltante '+etiqPer+':</b> '+
+      conAviso.map(function(f){
+        return esc(corto(f.nom))+(f.aviso==="falta_hora"
+          ? " (le falta la hora de un día: su rendimiento sale más alto de lo real)"
+          : " (le falta digitar esquejes de un día: su rendimiento sale más bajo de lo real)");
+      }).join(" · ")+'. Corrige en el Excel y vuelve a cargar el día.</div>'):"")+
     '</section>';
 
   /* --- gráfico del equipo --- */
@@ -1024,6 +1035,8 @@ function vistaDetalle(persona,equipoRegs,equipo){
   var eqAg=agrega(equipoRegs.filter(filtro));
   var difEq=(mio.r&&eqAg.r)?(mio.r/eqAg.r-1):null;
   var registros=hist.filter(filtro).sort(function(a,b){ return b.d-a.d; });
+  var faltanHoras=registros.filter(function(r){ return r.esq>0&&!(r.hor>0); });
+  var faltanEsq=registros.filter(function(r){ return r.hor>0&&r.esq<=0; });
 
   var s='<div class="detcab"><button class="btn btn-sec" id="volverequipo">← Volver al equipo</button>'+
     '<button class="btn btn-pri btn-mostrar" id="mostrar" data-p="'+persona.i+'">Mostrar a la persona</button>'+
@@ -1042,6 +1055,14 @@ function vistaDetalle(persona,equipoRegs,equipo){
     }).join("")+'</select></div></div>';
 
   s+='<div class="metasbarra">'+esc(etiqueta(per,clave))+' · metas <b>'+fInt(mR)+' esq/h</b> y <b>'+fPct(mC)+'</b></div>';
+  if(faltanHoras.length) s+='<div class="sinreg aviso">⚠ Le falta la hora en '+faltanHoras.length+
+    (faltanHoras.length===1?' día':' días')+' de '+esc(etiqueta(per,clave))+': '+
+    faltanHoras.map(function(r){ return dmy(r.ms)+" ("+fInt(r.esq)+" esquejes)"; }).join(" · ")+
+    '. Esos esquejes ya están sumados al total, pero el esq/h de este período sale más alto de lo real. Corrige la hora en el Excel.</div>';
+  if(faltanEsq.length) s+='<div class="sinreg aviso">⚠ Tiene horas sin esquejes en '+faltanEsq.length+
+    (faltanEsq.length===1?' día':' días')+' de '+esc(etiqueta(per,clave))+': '+
+    faltanEsq.map(function(r){ return dmy(r.ms)+" ("+f1(r.hor)+" horas)"; }).join(" · ")+
+    '. Eso baja el esq/h de este período. Revisa si faltó digitar los esquejes.</div>';
 
   s+='<div class="kpis">'+
     htmlKpi("Esquejes cosechados",fInt(mio.esq),"",f1(mio.hor)+" horas · "+mio.n+(mio.n===1?" día":" días"),true,"")+
@@ -1384,13 +1405,15 @@ function vistaAdmin(){
 
       var al=[];
       var sinHoras=idx.regs.filter(function(r){ return !(r.hor>0); }).length;
-      if(sinHoras) al.push(fInt(sinHoras)+" registros sin horas: se excluyen de todo cálculo de rendimiento.");
+      if(sinHoras) al.push(fInt(sinHoras)+" registros sin horas en total.");
       var cfRaro=idx.regs.filter(function(r){ return r.cf!=null&&r.cf>1; }).length;
       if(cfRaro) al.push(fInt(cfRaro)+" registros con calidad mayor al 100%.");
       var sinCf=idx.regs.filter(function(r){ return r.cf==null; }).length;
       if(sinCf) al.push(fInt(sinCf)+" registros sin revisión de calidad (casilla vacía o en cero). No entran en ningún promedio de calidad.");
-      var esqSinHoras=idx.regs.filter(function(r){ return !(r.hor>0)&&r.esq>0; }).length;
-      if(esqSinHoras) al.push(fInt(esqSinHoras)+" registros con esquejes y sin horas: sus esquejes no se contabilizan. Corrige las horas en el Excel.");
+      var esqSinHorasFilas=idx.regs.filter(function(r){ return !(r.hor>0)&&r.esq>0; });
+      if(esqSinHorasFilas.length){
+        al.push(fInt(esqSinHorasFilas.length)+" registros con esquejes y sin horas: esos esquejes SÍ suman al total, por eso el rendimiento de esa persona se ve más alto de lo normal en esa semana. Corrige las horas en el Excel.");
+      }
       var horasSinEsq=idx.regs.filter(function(r){ return r.hor>0&&r.esq<=0; }).length;
       if(horasSinEsq) al.push(fInt(horasSinEsq)+" registros con horas y cero esquejes: sí cuentan y bajan el promedio. Revisa si faltó digitar los esquejes.");
       var atip=idx.regs.filter(function(r){ return r.r!=null&&(r.r>3000||r.r<100); }).length;

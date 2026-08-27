@@ -413,6 +413,9 @@ function indexar(ds){
     regs[k]={ p:a[0], d:a[1], ms:ms, anio:f.getUTCFullYear(), mes:f.getUTCMonth(), sem:a[2],
       ciclo:Math.floor(a[2]/100), dia:a[3], esq:a[4], hor:hor, cf:a[6]==null?null:a[6]/1000,
       lider:ds.lideres[a[7]]||"SIN LÍDER", r:hor>0?a[4]/hor:null };
+    /* Calidad: vacío, cero o negativo significa que ese día no se revisó.
+       Se deja en null para que no entre en ningún promedio. */
+    if(regs[k].cf!=null&&regs[k].cf<=0) regs[k].cf=null;
     dias.add(a[1]); semanas.add(a[2]);
   }
   var porPersona=new Map();
@@ -454,7 +457,7 @@ function agrega(lista){
     var r=lista[i];
     if(!(r.hor>0)) continue;
     esq+=r.esq; hor+=r.hor; n++;
-    if(r.cf!=null){ cfs+=r.cf; ncf++; }
+    if(r.cf!=null&&r.cf>0){ cfs+=r.cf; ncf++; }
   }
   return { n:n, esq:esq, hor:hor, r:hor>0?esq/hor:null, cf:ncf?cfs/ncf:null };
 }
@@ -849,7 +852,7 @@ function vistaLider(lider,comoAdmin){
     if(!fPer(r)||!(r.hor>0)) return;
     if(!acc.has(r.p)) acc.set(r.p,{esq:0,hor:0,cf:0,ncf:0,n:0});
     var a=acc.get(r.p); a.esq+=r.esq; a.hor+=r.hor; a.n++;
-    if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
+    if(r.cf!=null&&r.cf>0){ a.cf+=r.cf; a.ncf++; }
   });
   var ultBase=idx.diasOrd.length?idx.diasOrd[0]:0, umbral=diasDormido();
   function dormido(p){ return p.dUlt==null||(ultBase-p.dUlt)>umbral; }
@@ -941,7 +944,7 @@ function vistaLider(lider,comoAdmin){
     if(r.d!==ref.d||!(r.hor>0)) return;
     if(!accD.has(r.p)) accD.set(r.p,{esq:0,hor:0,cf:0,ncf:0});
     var a=accD.get(r.p); a.esq+=r.esq; a.hor+=r.hor;
-    if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
+    if(r.cf!=null&&r.cf>0){ a.cf+=r.cf; a.ncf++; }
   });
   var rankDia=[];
   accD.forEach(function(a,p){ rankDia.push({ k:p, nom:idx.personas[p].nom, v:a.esq/a.hor, cf:a.ncf?a.cf/a.ncf:null }); });
@@ -1091,7 +1094,7 @@ function vistaDetalle(persona,equipoRegs,equipo){
   hist.forEach(function(r){
     if(!ml.has(r.lider)) ml.set(r.lider,{n:0,desde:r.ms,hasta:r.ms,esq:0,hor:0,cf:0,ncf:0});
     var a=ml.get(r.lider); a.n++; a.hasta=r.ms; a.esq+=r.esq; a.hor+=r.hor;
-    if(r.cf!=null){ a.cf+=r.cf; a.ncf++; }
+    if(r.cf!=null&&r.cf>0){ a.cf+=r.cf; a.ncf++; }
   });
   var filasL="";
   ml.forEach(function(a,l){
@@ -1321,10 +1324,14 @@ function vistaAdmin(){
       var al=[];
       var sinHoras=idx.regs.filter(function(r){ return !(r.hor>0); }).length;
       if(sinHoras) al.push(fInt(sinHoras)+" registros sin horas: se excluyen de todo cálculo de rendimiento.");
-      var cfRaro=idx.regs.filter(function(r){ return r.cf!=null&&(r.cf<0||r.cf>1); }).length;
-      if(cfRaro) al.push(fInt(cfRaro)+" registros con conformidad fuera del rango 0–100%.");
+      var cfRaro=idx.regs.filter(function(r){ return r.cf!=null&&r.cf>1; }).length;
+      if(cfRaro) al.push(fInt(cfRaro)+" registros con calidad mayor al 100%.");
       var sinCf=idx.regs.filter(function(r){ return r.cf==null; }).length;
-      if(sinCf) al.push(fInt(sinCf)+" registros sin conformidad.");
+      if(sinCf) al.push(fInt(sinCf)+" registros sin revisión de calidad (casilla vacía o en cero). No entran en ningún promedio de calidad.");
+      var esqSinHoras=idx.regs.filter(function(r){ return !(r.hor>0)&&r.esq>0; }).length;
+      if(esqSinHoras) al.push(fInt(esqSinHoras)+" registros con esquejes y sin horas: sus esquejes no se contabilizan. Corrige las horas en el Excel.");
+      var horasSinEsq=idx.regs.filter(function(r){ return r.hor>0&&r.esq<=0; }).length;
+      if(horasSinEsq) al.push(fInt(horasSinEsq)+" registros con horas y cero esquejes: sí cuentan y bajan el promedio. Revisa si faltó digitar los esquejes.");
       var atip=idx.regs.filter(function(r){ return r.r!=null&&(r.r>3000||r.r<100); }).length;
       if(atip) al.push(fInt(atip)+" registros con rendimiento atípico (bajo 100 o sobre 3.000 esq/h).");
       var ultA=idx.diasOrd.length?idx.diasOrd[0]:0, umbA=diasDormido();

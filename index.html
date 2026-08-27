@@ -152,6 +152,7 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .kpi-no .kpival{border-bottom-color:var(--bajo)}
 .metas{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .metas .inp-mini{min-width:78px}
+.inp-pin{min-width:84px;font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:.06em}
 .btn-mostrar{width:auto;margin-top:0}
 
 /* pantalla para mostrar a la persona */
@@ -234,6 +235,33 @@ var DIA_MS = 86400000;
 var STORE_KEY = "trigal_rend_v1";
 
 /* ------------------------------ utilidades ------------------------------ */
+
+/* Los usuarios viven dentro de datos.json. Si el archivo aún no los trae,
+   se usan los seis líderes y PIN de fábrica. */
+function listaUsuarios(){
+  var u=(E.ds&&E.ds.meta&&Array.isArray(E.ds.meta.usuarios))?E.ds.meta.usuarios:null;
+  if(u&&u.length) return u;
+  return LIDERES_ACTUALES.map(function(l){ return { lider:l, pin:PINES[l] }; });
+}
+function pinAdmin(){
+  var p=(E.ds&&E.ds.meta)?E.ds.meta.pinAdmin:null;
+  return p?String(p):PINES.__ADMIN__;
+}
+function tieneUsuario(lider){
+  return listaUsuarios().some(function(u){ return u.lider===lider; });
+}
+function pinLibre(){
+  var usados=listaUsuarios().map(function(u){ return +u.pin; });
+  var n=1001;
+  while(usados.indexOf(n)>=0||String(n)===pinAdmin()) n++;
+  return String(n);
+}
+function asegurarUsuarios(){
+  if(!E.ds.meta.usuarios||!E.ds.meta.usuarios.length){
+    E.ds.meta.usuarios=listaUsuarios().map(function(u){ return { lider:u.lider, pin:String(u.pin) }; });
+  }
+  if(!E.ds.meta.pinAdmin) E.ds.meta.pinAdmin=PINES.__ADMIN__;
+}
 
 function metaRend(){ var m=E.ds&&E.ds.meta?E.ds.meta.metaRend:null; return (m&&m>0)?m:META_REND_DEF; }
 function metaCal(){ var m=E.ds&&E.ds.meta?E.ds.meta.metaCal:null; return (m&&m>0)?m:META_CAL_DEF; }
@@ -664,7 +692,8 @@ function exportarTablero(){
 
 function vistaLogin(){
   var opts='<option value="">Selecciona…</option>';
-  LIDERES_ACTUALES.forEach(function(l){ opts+='<option value="'+esc(l)+'">'+esc(l)+'</option>'; });
+  listaUsuarios().slice().sort(function(a,b){ return a.lider.localeCompare(b.lider,"es"); })
+    .forEach(function(u){ opts+='<option value="'+esc(u.lider)+'">'+esc(u.lider)+'</option>'; });
   opts+='<option value="__ADMIN__">YUBER · administrador</option>';
   var meta=E.ds?E.ds.meta:null;
   return '<div class="login"><div class="loginbox">'+
@@ -1106,7 +1135,7 @@ function vistaAdmin(){
   var s='<div class="pantalla">'+htmlCab("Panel de administración · Yuber",sub,
     '<button class="btn btn-sec" id="salir">Salir</button>')+
     '<div class="barrafiltros"><div class="grupo">'+
-    [["datos","Cargar y validar datos"],["general","Vista general"],["lider","Ver como líder"]].map(function(x){
+    [["datos","Cargar y validar datos"],["general","Vista general"],["usuarios","Usuarios y PIN"],["lider","Ver como líder"]].map(function(x){
       return '<button class="chip'+(E.pestana===x[0]?" chip-on":"")+'" data-pestana="'+x[0]+'">'+x[1]+'</button>';
     }).join("")+'</div></div>';
 
@@ -1174,8 +1203,13 @@ function vistaAdmin(){
       if(atip) al.push(fInt(atip)+" registros con rendimiento atípico (bajo 100 o sobre 3.000 esq/h).");
       var noCos=idx.personas.filter(function(p){ return p.activo&&!p.cosecha; }).length;
       if(noCos) al.push(fInt(noCos)+" personas activas con labor distinta a cosecha de esquejes: no salen en los tableros, pero su histórico se conserva.");
-      var fuera=idx.lideres.filter(function(l){ return LIDERES_ACTUALES.indexOf(l)<0; });
-      if(fuera.length) al.push("Líderes en los datos fuera de la lista de 6 usuarios: "+fuera.join(", ")+".");
+      var fuera=idx.lideres.filter(function(l){
+        if(tieneUsuario(l)) return false;
+        var pp=idx.equipos.get(l)||[];
+        return pp.some(function(x){ return x.activo&&x.cosecha; });
+      });
+      if(fuera.length) al.push("Líderes con cosecheros activos y sin usuario para entrar: "+fuera.join(", ")+
+        ". Créalos en la pestaña Usuarios y PIN.");
       s+='<section class="tarj"><h3 class="tarjtit">Revisión de calidad de la base'+
         '<span class="tarjsub">lo que conviene corregir en el origen</span></h3>'+
         (al.length?('<ul class="lista"><li>'+al.map(esc).join("</li><li>")+'</li></ul>')
@@ -1207,11 +1241,11 @@ function vistaAdmin(){
       act.forEach(function(p){ var h=idx.porPersona.get(p.i); if(h) regs=regs.concat(h); });
       arr.push({ lider:lider, act:act.length, otros:otros, an:agrega(regs),
         hoy:agrega(regs.filter(function(r){ return r.d===ult; })),
-        oficial:LIDERES_ACTUALES.indexOf(lider)>=0 });
+        oficial:tieneUsuario(lider) });
     });
     arr.sort(function(a,b){ return (b.an.r||0)-(a.an.r||0); });
     arr.forEach(function(l){
-      filas+='<tr><td>'+esc(l.lider)+(l.oficial?"":'<span class="tag">fuera de la lista de 6</span>')+'</td>'+
+      filas+='<tr><td>'+esc(l.lider)+(l.oficial?"":'<span class="tag">sin usuario</span>')+'</td>'+
         '<td class="num">'+fInt(l.act)+'</td><td class="num">'+fInt(l.otros)+'</td>'+
         '<td class="num">'+fInt(l.hoy.r)+'</td><td class="num fuerte">'+fInt(l.an.r)+'</td>'+
         '<td class="num">'+fInt(l.an.esq)+'</td><td class="num">'+fPct(l.an.cf)+'</td>'+
@@ -1230,6 +1264,47 @@ function vistaAdmin(){
     s+='<section class="tarj"><h3 class="tarjtit">Rendimiento de la finca por semana'+
       '<span class="tarjsub">todas las personas de la base</span></h3>'+
       svgBarras(serieS,{refLinea:tot.r,etiquetaRef:"prom. base"})+'</section>';
+  }
+
+  if(E.pestana==="usuarios"){
+    if(!idx) return s+'<div class="vacio">Carga primero los datos.</div></div>';
+    var us=listaUsuarios();
+    var pinPorLider={};
+    us.forEach(function(u){ pinPorLider[u.lider]=String(u.pin); });
+    var enDatos=idx.lideres.slice();
+    us.forEach(function(u){ if(enDatos.indexOf(u.lider)<0) enDatos.push(u.lider); });
+    enDatos.sort(function(a,b){ return a.localeCompare(b,"es"); });
+
+    var filasU="";
+    enDatos.forEach(function(l,i){
+      var personas=idx.equipos.get(l)||[];
+      var act=personas.filter(function(p){ return p.activo&&p.cosecha; }).length;
+      var otros=personas.filter(function(p){ return p.activo&&!p.cosecha; }).length;
+      var tiene=pinPorLider[l]!=null;
+      filasU+='<tr><td>'+esc(l)+(personas.length?"":'<span class="tag">sin registros en la base</span>')+'</td>'+
+        '<td class="num">'+fInt(act)+'</td><td class="num">'+fInt(otros)+'</td>'+
+        '<td>'+(tiene
+          ? '<input class="inp inp-mini inp-pin" id="pin_'+i+'" type="text" inputmode="numeric" maxlength="6" value="'+esc(pinPorLider[l])+'">'
+          : '<span class="mini">sin usuario</span>')+'</td>'+
+        '<td>'+(tiene
+          ? '<button class="btn btn-mini" data-guardarpin="'+i+'" data-lider="'+esc(l)+'">Guardar PIN</button> '+
+            '<button class="btn btn-mini" data-quitaruser="'+esc(l)+'">Quitar</button>'
+          : '<button class="btn btn-mini" data-crearuser="'+esc(l)+'">Crear usuario (PIN '+pinLibre()+')</button>')+
+        '</td></tr>';
+    });
+
+    s+='<section class="tarj"><h3 class="tarjtit">Usuarios de los líderes'+
+      '<span class="tarjsub">se guardan dentro de datos.json y viajan al sitio en la próxima subida</span></h3>'+
+      '<div class="tablabox"><table class="tabla"><thead><tr><th>Líder</th><th class="num">En cosecha</th>'+
+      '<th class="num">Otra labor</th><th>PIN</th><th>Acción</th></tr></thead><tbody>'+filasU+
+      '</tbody></table></div></section>'+
+      '<section class="tarj"><h3 class="tarjtit">Tu PIN de administrador'+
+      '<span class="tarjsub">si lo cambias y lo olvidas hay que volver a subir el index.html</span></h3>'+
+      '<div class="metas"><label class="lblmini" for="pinadmin">PIN</label>'+
+      '<input class="inp inp-mini inp-pin" id="pinadmin" type="text" inputmode="numeric" maxlength="6" value="'+esc(pinAdmin())+'">'+
+      '<button class="btn btn-mini" id="guardarpinadmin">Guardar</button></div></section>';
+    if(E.mensaje) s+='<div class="'+(E.mensaje.tipo==="ok"?"ok":"err")+'">'+esc(E.mensaje.txt)+'</div>';
+    s+='<div class="vacio">Después de cambiar usuarios o PIN, ve a la pestaña de datos, descarga <b>datos.json</b> y súbelo al sitio. Hasta que no lo subas, el cambio solo existe en este equipo.</div>';
   }
 
   if(E.pestana==="lider"){
@@ -1284,7 +1359,11 @@ function conectar(){
     var u=document.getElementById("u").value, p=document.getElementById("p").value;
     var err=document.getElementById("loginerr");
     if(!u){ err.innerHTML='<div class="err">Elige tu usuario.</div>'; return; }
-    if(p!==PINES[u]){ err.innerHTML='<div class="err">PIN incorrecto.</div>'; return; }
+    var esperado=(u==="__ADMIN__")?pinAdmin():null;
+    if(esperado===null){
+      listaUsuarios().forEach(function(x){ if(x.lider===u) esperado=String(x.pin); });
+    }
+    if(!esperado||p!==esperado){ err.innerHTML='<div class="err">PIN incorrecto.</div>'; return; }
     E.sesion=(u==="__ADMIN__")?{tipo:"admin"}:{tipo:"lider",lider:u};
     render();
   });
@@ -1339,6 +1418,53 @@ function conectar(){
   on("reemplazar","click",function(){ aplicar("reemplazar"); });
   on("limpiar","click",function(){ E.previo=null; E.mensaje=null; render(); });
   on("filearch","change",function(e){ leerArchivo(e,function(t){ validarTexto(t); }); });
+  document.querySelectorAll("[data-guardarpin]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var i=b.getAttribute("data-guardarpin"), lider=b.getAttribute("data-lider");
+      var val=String(document.getElementById("pin_"+i).value||"").trim();
+      if(!/^\d{4,6}$/.test(val)){ alert("El PIN debe tener entre 4 y 6 dígitos."); return; }
+      if(val===pinAdmin()){ alert("Ese PIN es el del administrador. Usa otro."); return; }
+      var choque=listaUsuarios().filter(function(u){ return u.lider!==lider&&String(u.pin)===val; });
+      if(choque.length){ alert("Ese PIN ya lo tiene "+choque[0].lider+"."); return; }
+      asegurarUsuarios();
+      E.ds.meta.usuarios.forEach(function(u){ if(u.lider===lider) u.pin=val; });
+      guardar(E.ds);
+      E.mensaje={tipo:"ok",txt:"PIN de "+lider+" cambiado a "+val+". Descarga datos.json y súbelo para que aplique en las tablets."};
+      render();
+    });
+  });
+  document.querySelectorAll("[data-crearuser]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var lider=b.getAttribute("data-crearuser");
+      asegurarUsuarios();
+      var pin=pinLibre();
+      E.ds.meta.usuarios.push({ lider:lider, pin:pin });
+      guardar(E.ds);
+      E.mensaje={tipo:"ok",txt:"Usuario creado para "+lider+" con PIN "+pin+". Puedes cambiarlo en la tabla. Recuerda subir datos.json."};
+      render();
+    });
+  });
+  document.querySelectorAll("[data-quitaruser]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var lider=b.getAttribute("data-quitaruser");
+      if(!confirm("¿Quitar el usuario de "+lider+"? No podrá entrar al tablero. Sus datos no se borran.")) return;
+      asegurarUsuarios();
+      E.ds.meta.usuarios=E.ds.meta.usuarios.filter(function(u){ return u.lider!==lider; });
+      guardar(E.ds);
+      E.mensaje={tipo:"ok",txt:"Usuario de "+lider+" eliminado. Recuerda subir datos.json."};
+      render();
+    });
+  });
+  on("guardarpinadmin","click",function(){
+    var val=String(document.getElementById("pinadmin").value||"").trim();
+    if(!/^\d{4,6}$/.test(val)){ alert("El PIN debe tener entre 4 y 6 dígitos."); return; }
+    if(listaUsuarios().some(function(u){ return String(u.pin)===val; })){ alert("Ese PIN ya lo tiene un líder."); return; }
+    asegurarUsuarios();
+    E.ds.meta.pinAdmin=val;
+    guardar(E.ds);
+    E.mensaje={tipo:"ok",txt:"Tu PIN de administrador es ahora "+val+". Anótalo: si lo olvidas hay que volver a subir el index.html."};
+    render();
+  });
   on("guardarmetas","click",function(){
     if(!E.ds) return;
     var r=+document.getElementById("metar").value, c=+document.getElementById("metac").value;

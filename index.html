@@ -236,7 +236,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 22:50"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-08-27 23:10"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -366,7 +366,8 @@ function construirDesdeFilas(filas){
     var p=porCod.get(f.cod);
     p.ultima=f;
     regs.push([p.idx, Math.round((f.fechaMs-base)/DIA_MS), f.sem, f.dia, f.esq,
-      Math.round((f.hor||0)*100), f.cf==null?null:Math.round(f.cf*1000), idxDe(lidSet,f.lid)]);
+      Math.round((f.hor||0)*100), f.cf==null?null:Math.round(f.cf*1000), idxDe(lidSet,f.lid),
+      f.boni||0]);
   }
   var personas=[];
   porCod.forEach(function(p,cod){
@@ -376,10 +377,11 @@ function construirDesdeFilas(filas){
   });
   var maxD=0;
   for(var k=0;k<regs.length;k++) if(regs[k][1]>maxD) maxD=regs[k][1];
+  var tieneBoni=regs.some(function(r){ return r[8]>0; });
   return {
     v:1,
     meta:{ base:ymd(base), generado:new Date().toISOString(), registros:regs.length, personas:personas.length,
-      fechaMin:ymd(base), fechaMax:ymd(base+maxD*DIA_MS) },
+      fechaMin:ymd(base), fechaMax:ymd(base+maxD*DIA_MS), tieneBoni:tieneBoni },
     lideres:lidSet, labores:labSet, personas:personas, regs:regs
   };
 }
@@ -537,7 +539,8 @@ function mapaColumnas(cabecera){
     CONF:["CONFORMIDAD","CALIDAD"], LIDER:["LIDER 0","LIDER"], EXP:["EXPERIENCIA"],
     ACT:["ACTIVO","LABORANDO/RETIRADOS","ESTADO"], LAB:["LABOR"],
     FIP:["FECHA DE INGRESO PERSONA","FECHA INGRESO PERSONA","FECHA DE INGRESO"],
-    FIE:["FECHA DE INGRESO ESQUEJE","FECHA INGRESO ESQUEJE","FECHA ESQUEJE","FECHA"]
+    FIE:["FECHA DE INGRESO ESQUEJE","FECHA INGRESO ESQUEJE","FECHA ESQUEJE","FECHA"],
+    BONI:["BONIFICACION","BONIFICACIÓN","BONO","BONIFICACIONES"]
   };
   var cab=cabecera.map(norm), m={};
   Object.keys(alias).forEach(function(clave){
@@ -565,7 +568,7 @@ function parsearTexto(texto){
   var sep=detectarSeparador(lineas[0]);
   var primera=lineas[0].split(sep);
   var conCabecera=norm(primera.join(" ")).indexOf("ESQUEJES")>=0 || norm(primera[0])==="CODIGO";
-  var pos={CODIGO:0,NOMBRE:1,SEMANA:2,TIPO:3,ESQ:4,HOR:5,CONF:6,LIDER:7,EXP:8,ACT:9,LAB:10,FIP:11,FIE:12};
+  var pos={CODIGO:0,NOMBRE:1,SEMANA:2,TIPO:3,ESQ:4,HOR:5,CONF:6,LIDER:7,EXP:8,ACT:9,LAB:10,FIP:11,FIE:12,BONI:13};
   var map=conCabecera?mapaColumnas(primera):pos;
   if(map.CODIGO<0||map.ESQ<0||map.HOR<0||map.FIE<0)
     return { error:"Faltan columnas obligatorias: CODIGO, ESQUEJES COSECHADOS, HORAS COSECHADAS y FECHA DE INGRESO ESQUEJE." };
@@ -582,6 +585,7 @@ function parsearTexto(texto){
     if(cf!=null && cf>1.5) cf=cf/100;
     var tipo=map.TIPO>=0?String(c[map.TIPO]||""):"";
     var diaN=numOrNull(tipo.replace(/[^0-9]/g,""))||0;
+    var boniVal=map.BONI>=0?numOrNull(c[map.BONI]):null;
     filas.push({
       cod:Math.round(cod),
       nom:String(c[map.NOMBRE]!=null?c[map.NOMBRE]:"").trim()||("CÓDIGO "+Math.round(cod)),
@@ -592,7 +596,8 @@ function parsearTexto(texto){
       act:map.ACT>=0?String(c[map.ACT]||"").trim():"LABORANDO",
       lab:map.LAB>=0?String(c[map.LAB]||"").trim():"SIN REGISTRO",
       ingreso:map.FIP>=0?parseFecha(c[map.FIP]):null,
-      fechaMs:fechaMs
+      fechaMs:fechaMs,
+      boni:boniVal!=null&&boniVal>0?Math.round(boniVal):0
     });
   }
   if(!filas.length) return { error:"Ninguna fila pasó la validación.", errores:errores };

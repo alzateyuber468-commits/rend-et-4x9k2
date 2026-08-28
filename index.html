@@ -115,6 +115,7 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 /* pestañas Rendimiento / Calidad */
 .avisoapoyos{font-size:12.5px;color:var(--muted);background:#F5F7FC;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:12px}
 .link-persona{background:none;border:0;padding:0;font:inherit;color:var(--deep);cursor:pointer;text-decoration:underline;text-align:left}
+.boni-volver{margin-top:14px;text-align:center}
 .pestanas{display:flex;gap:0;margin-bottom:14px;background:#E7EAF2;border-radius:11px;padding:4px}
 .pest{flex:1;font:inherit;font-size:15px;font-weight:700;padding:11px 8px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
 .pest-on{background:var(--deep);color:#fff;box-shadow:0 1px 3px rgba(31,51,97,.3)}
@@ -235,7 +236,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 22:00"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-08-27 22:15"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -1007,6 +1008,9 @@ function vistaLider(lider,comoAdmin){
         fInt(sinBoni.length)+' sin bonificación'+(!qBoni?" esta semana":"")+': '+
         sinBoni.map(function(f){ return esc(corto(f.nom)); }).join(" · ")+'</td></tr>'):"") +
       '</tbody></table></div></section>';
+    if(comoAdmin){
+      s+='<div class="boni-volver"><button class="btn btn-sec" id="volveradmin">← Volver al panel</button></div>';
+    }
     return s+"</div>";
   }
   /* === FIN BONIFICACIONES === */

@@ -235,7 +235,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 21:10"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-08-27 22:00"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -732,7 +732,7 @@ function htmlCab(titulo,sub,botones){
 var E={ ds:null, idx:null, sesion:null, periodo:"dia", dRef:null, semFiltro:"", personaSel:null,
   pestana:"datos", previo:null, mensaje:null, verComo:"", red:"", mostrar:null,
   vista:"rend", orden:"apellido", cump:"todos", detPeriodo:"dia", detClave:null,
-  estadoFiltro:"activos", buscarPersona:"", adminPersonaSel:null,
+  estadoFiltro:"activos", buscarPersona:"", adminPersonaSel:null, buscarBoni:"", semBoni:null,
   mesFiltro:"", anioFiltro:"", showPeriodo:"dia", showClave:null };
 
 function setDs(ds){
@@ -878,7 +878,8 @@ function vistaLider(lider,comoAdmin){
   var optPer='<option value="">'+(esApoyos?"Ver todos los apoyos":"Ver todo el equipo")+'</option>'+equipo.map(function(p){
     return '<option value="'+p.i+'">'+esc(p.nom)+'</option>';
   }).join("");
-  s+='<div class="barrafiltros"><div class="grupo">'+chips+'</div><div class="grupo">'+
+  if(esBoni) s='<div class="pantalla">'+htmlCab(titulo,sub,botones); // reset: la vista boni tiene su propia UI
+  if(!esBoni) s+='<div class="barrafiltros"><div class="grupo">'+chips+'</div><div class="grupo">'+
     '<label class="lblmini" for="fdia">Día</label><select id="fdia" class="inp inp-mini">'+optDias+'</select>'+
     '<label class="lblmini" for="fsem">Semana</label><select id="fsem" class="inp inp-mini">'+optSem+'</select>'+
     '<label class="lblmini" for="fmes">Mes</label><select id="fmes" class="inp inp-mini">'+
@@ -898,6 +899,8 @@ function vistaLider(lider,comoAdmin){
     '<label class="lblmini" for="fper">Persona</label><select id="fper" class="inp inp-mini inp-per">'+optPer+'</select>'+
     '</div></div>';
 
+  /* === BONIFICACIONES intercepta aquí, antes de KPIs y cinta === */
+  if(!esBoni){
   var kd=agrega(regsEquipo.filter(filtroPeriodo("dia",ref)));
   var ks=agrega(regsEquipo.filter(function(r){ return r.sem===semActiva; }));
   var km=agrega(regsEquipo.filter(filtroPeriodo("mes",ref)));
@@ -954,6 +957,8 @@ function vistaLider(lider,comoAdmin){
   var conAviso=todasFilas.filter(function(f){ return f.aviso; });
   var etiqPer={dia:"del día",semana:"de la semana",mes:"del mes",anual:"del año"}[E.periodo];
 
+  } // fin if(!esBoni)
+
   /* === VISTA BONIFICACIONES === */
   if(esBoni){
     var semanas=Array.from(new Set(regsEquipo.map(function(r){ return r.sem; }))).sort(function(a,b){ return b-a; });
@@ -966,32 +971,40 @@ function vistaLider(lider,comoAdmin){
       if(r.boni>0&&a.boni===0) a.boni=r.boni;
       a.esq+=r.esq; if(r.hor>0) a.hor+=r.hor; a.n++;
     });
-    var filasB=equipo.filter(function(p){ return porPersonaB.has(p.i); })
+    var filasB=equipo
       .map(function(p){
-        var a=porPersonaB.get(p.i);
+        var a=porPersonaB.get(p.i)||{boni:0,esq:0,hor:0,n:0};
         return { i:p.i, nom:p.nom, boni:a.boni, esq:a.esq, hor:a.hor, r:a.hor>0?a.esq/a.hor:null };
       })
-      .sort(function(a,b){ return b.boni-a.boni; });
-    var sinBoni=filasB.filter(function(f){ return f.boni===0; });
-    var conBoni=filasB.filter(function(f){ return f.boni>0; });
+      .sort(function(a,b){ return norm(a.nom).localeCompare(norm(b.nom),"es"); }); // orden alfabético sin tildes
+    /* filtro por nombre */
+    var qBoni=E.buscarBoni?norm(E.buscarBoni):"";
+    var filasBFilt=qBoni?filasB.filter(function(f){ return norm(f.nom).indexOf(qBoni)>=0; }):filasB;
+    var conBoni=filasBFilt.filter(function(f){ return f.boni>0; });
+    var sinBoni=filasBFilt.filter(function(f){ return f.boni===0; });
     var totalB=conBoni.reduce(function(s,f){ return s+f.boni; },0);
-    var optSemB='<option value="">— Selecciona semana —</option>'+semanas.slice(0,60).map(function(x){
+    var optSemB=semanas.slice(0,60).map(function(x){
       return '<option value="'+x+'"'+(x===semB?" selected":"")+'>'+x+'</option>';
     }).join("");
+    /* filtros: semana (propio, no comparte con el de arriba) y buscador de nombre */
     s+='<div class="barrafiltros"><div class="grupo">'+
-      '<label class="lblmini" for="fsem">Semana</label>'+
-      '<select id="fsem" class="inp inp-mini">'+optSemB+'</select></div></div>';
-    s+='<div class="metasbarra">Semana <b>'+semB+'</b> · '+fInt(conBoni.length)+' personas con bonificación · total equipo <b>$'+nfInt.format(totalB)+'</b></div>';
-    s+='<section class="tarj"><h3 class="tarjtit">Bonificación por persona · semana '+semB+'</h3>'+
+      '<label class="lblmini" for="fsemboni">Semana</label>'+
+      '<select id="fsemboni" class="inp inp-mini">'+optSemB+'</select>'+
+      '</div><div class="grupo">'+
+      '<input class="inp inp-mini inp-per" id="buscarboni" type="text" placeholder="Buscar por nombre…" value="'+esc(E.buscarBoni||"")+'">'+
+      '</div></div>';
+    s+='<div class="metasbarra">Semana <b>'+semB+'</b> · '+fInt(conBoni.length)+' personas con bonificación'+
+      (qBoni?" (filtrado)":"")+' · total equipo <b>$'+nfInt.format(totalB)+'</b></div>';
+    s+='<section class="tarj"><h3 class="tarjtit">Bonificación por persona · semana '+semB+
+      '<span class="tarjsub">orden alfabético</span></h3>'+
       '<div class="tablabox"><table class="tabla"><thead><tr>'+
-      '<th>Nombre</th><th class="num">Bonificación</th><th class="num">Esquejes</th><th class="num">esq/h</th></tr></thead><tbody>'+
+      '<th>Nombre</th><th class="num">Bonificación</th></tr></thead><tbody>'+
       conBoni.map(function(f){
         return '<tr><td><button class="link-persona" data-persona="'+f.i+'">'+esc(corto(f.nom))+'</button></td>'+
-          '<td class="num fuerte">$'+nfInt.format(f.boni)+'</td>'+
-          '<td class="num">'+fInt(f.esq)+'</td><td class="num">'+fInt(f.r)+'</td></tr>';
+          '<td class="num fuerte">$'+nfInt.format(f.boni)+'</td></tr>';
       }).join("")+
-      (sinBoni.length?('<tr><td colspan="4" class="mini" style="color:var(--muted);padding-top:10px">'+
-        fInt(sinBoni.length)+' sin bonificación esta semana: '+
+      (sinBoni.length?('<tr><td colspan="2" class="mini" style="color:var(--muted);padding-top:10px">'+
+        fInt(sinBoni.length)+' sin bonificación'+(!qBoni?" esta semana":"")+': '+
         sinBoni.map(function(f){ return esc(corto(f.nom)); }).join(" · ")+'</td></tr>'):"") +
       '</tbody></table></div></section>';
     return s+"</div>";
@@ -1770,7 +1783,7 @@ function conectar(){
   document.querySelectorAll("[data-vista]").forEach(function(b){
     b.addEventListener("click",function(){
       E.vista=b.getAttribute("data-vista");
-      E.personaSel=null; E.laborFiltro=""; E.cump="todos"; render();
+      E.personaSel=null; E.laborFiltro=""; E.cump="todos"; E.buscarBoni=""; E.semFiltro=""; render();
     });
   });
   document.querySelectorAll("[data-detper]").forEach(function(b){
@@ -1853,6 +1866,16 @@ function conectar(){
       E.mensaje={tipo:"ok",txt:"Usuario de "+lider+" eliminado. Recuerda subir datos.json."};
       render();
     });
+  });
+  on("fsemboni","change",function(e){
+    E.semFiltro=e.target.value; render();
+  });
+  on("buscarboni","input",function(e){
+    E.buscarBoni=e.target.value;
+    var pos=e.target.selectionStart;
+    render();
+    var el=document.getElementById("buscarboni");
+    if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(err){} }
   });
   document.querySelectorAll("[data-genper]").forEach(function(b){
     b.addEventListener("click",function(){ E.generalPeriodo=b.getAttribute("data-genper"); E.generalClave=null; render(); });

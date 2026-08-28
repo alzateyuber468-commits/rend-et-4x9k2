@@ -236,7 +236,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 22:35"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-08-27 22:50"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -853,17 +853,19 @@ function vistaLider(lider,comoAdmin){
     return s+"</div>";
   }
 
-  /* --- pestañas Rendimiento / Calidad / Apoyos / Bonificaciones --- */
-  if(soloApoyos){
-    s+='<div class="avisoapoyos">Personal activo cuya labor no es cosecha. Lo ve cualquier líder, sin importar a quién esté asignada la persona.</div>';
-  } else {
-    var pestBoni=idx.meta&&idx.meta.tieneBoni;
-    s+='<div class="pestanas">'+
-      '<button class="pest'+(E.vista==="rend"?" pest-on":"")+'" data-vista="rend">Rendimiento</button>'+
-      '<button class="pest'+(E.vista==="cal"?" pest-on":"")+'" data-vista="cal">Calidad</button>'+
-      (pestBoni?('<button class="pest'+(E.vista==="boni"?" pest-on":"")+'" data-vista="boni">Bonificaciones</button>'):"" )+
-      '<button class="pest'+(E.vista==="apoyos"?" pest-on":"")+'" data-vista="apoyos">Apoyos</button></div>';
-    if(esApoyos) s+='<div class="avisoapoyos">Personal activo en labores distintas a cosecha, de todos los líderes.</div>';
+    /* --- pestañas Rendimiento / Calidad / Apoyos / Bonificaciones --- */
+  if(!esBoni){
+    if(soloApoyos){
+      s+='<div class="avisoapoyos">Personal activo cuya labor no es cosecha. Lo ve cualquier líder, sin importar a quién esté asignada la persona.</div>';
+    } else {
+      var pestBoni=idx.meta&&idx.meta.tieneBoni;
+      s+='<div class="pestanas">'+
+        '<button class="pest'+(E.vista==="rend"?" pest-on":"")+'" data-vista="rend">Rendimiento</button>'+
+        '<button class="pest'+(E.vista==="cal"?" pest-on":"")+'" data-vista="cal">Calidad</button>'+
+        (pestBoni?('<button class="pest'+(E.vista==="boni"?" pest-on":"")+'" data-vista="boni">Bonificaciones</button>'):"" )+
+        '<button class="pest'+(E.vista==="apoyos"?" pest-on":"")+'" data-vista="apoyos">Apoyos</button></div>';
+      if(esApoyos) s+='<div class="avisoapoyos">Personal activo en labores distintas a cosecha, de todos los líderes.</div>';
+    }
   }
 
   /* --- filtros --- */

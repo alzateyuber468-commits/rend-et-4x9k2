@@ -114,6 +114,7 @@ h1,h2,h3,p,ol,ul,table{margin:0}
 .t-alto{color:var(--alto)}.t-bajo{color:var(--bajo)}.t-medio{color:var(--medio)}
 /* pestañas Rendimiento / Calidad */
 .avisoapoyos{font-size:12.5px;color:var(--muted);background:#F5F7FC;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:12px}
+.link-persona{background:none;border:0;padding:0;font:inherit;color:var(--deep);cursor:pointer;text-decoration:underline;text-align:left}
 .pestanas{display:flex;gap:0;margin-bottom:14px;background:#E7EAF2;border-radius:11px;padding:4px}
 .pest{flex:1;font:inherit;font-size:15px;font-weight:700;padding:11px 8px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
 .pest-on{background:var(--deep);color:#fff;box-shadow:0 1px 3px rgba(31,51,97,.3)}
@@ -234,7 +235,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 19:40"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-08-27 21:10"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -429,7 +430,8 @@ function indexar(ds){
     var a=ds.regs[k], hor=(a[5]||0)/100, ms=baseMs+a[1]*DIA_MS, f=new Date(ms);
     regs[k]={ p:a[0], d:a[1], ms:ms, anio:f.getUTCFullYear(), mes:f.getUTCMonth(), sem:a[2],
       ciclo:Math.floor(a[2]/100), dia:a[3], esq:a[4], hor:hor, cf:a[6]==null?null:a[6]/1000,
-      lider:ds.lideres[a[7]]||"SIN LÍDER", r:hor>0?a[4]/hor:null };
+      lider:ds.lideres[a[7]]||"SIN LÍDER", r:hor>0?a[4]/hor:null,
+      boni:a.length>8?a[8]:0 };
     /* Calidad: vacío, cero o negativo significa que ese día no se revisó.
        Se deja en null para que no entre en ningún promedio. */
     if(regs[k].cf!=null&&regs[k].cf<=0) regs[k].cf=null;
@@ -475,13 +477,18 @@ function indexar(ds){
    real sin cosecha o esquejes sin digitar, y también debe verse. */
 function agrega(lista){
   var esq=0,hor=0,cfs=0,ncf=0,n=0;
+  /* Bonificación: un valor por semana por persona. Sumamos el valor único de
+     cada semana (no multiplicamos por los días de la semana). */
+  var boniSems=new Map(), boniTotal=0;
   for(var i=0;i<lista.length;i++){
     var r=lista[i];
-    if(r.esq<=0&&!(r.hor>0)) continue; // fila realmente vacía
+    if(r.esq<=0&&!(r.hor>0)) continue;
     esq+=r.esq; hor+=r.hor; n++;
     if(r.cf!=null&&r.cf>0){ cfs+=r.cf; ncf++; }
+    if(r.boni>0&&!boniSems.has(r.sem)){ boniSems.set(r.sem,r.boni); boniTotal+=r.boni; }
   }
-  return { n:n, esq:esq, hor:hor, r:hor>0?esq/hor:null, cf:ncf?cfs/ncf:null };
+  return { n:n, esq:esq, hor:hor, r:hor>0?esq/hor:null, cf:ncf?cfs/ncf:null,
+           boni:boniTotal, nBoniSems:boniSems.size };
 }
 function filtroPeriodo(periodo,ref){
   if(periodo==="dia") return function(r){ return r.d===ref.d; };
@@ -823,6 +830,7 @@ function vistaLider(lider,comoAdmin){
   var cicloActivo=E.anioFiltro!==""?+E.anioFiltro:ref0.ciclo;
   var ref={ d:dRef, ms:ref0.ms, sem:semActiva, anio:Math.floor(mesActivo/12), mes:mesActivo%12, ciclo:cicloActivo };
   var mR=metaRend(), mC=metaCal();
+  var esBoni=(E.vista==="boni"&&!esApoyos);
   var esCal=(E.vista==="cal"&&!esApoyos);
 
   var botones=(comoAdmin?'<button class="btn btn-sec" id="volveradmin">Volver al panel</button>'
@@ -844,13 +852,15 @@ function vistaLider(lider,comoAdmin){
     return s+"</div>";
   }
 
-  /* --- pestañas Rendimiento / Calidad / Apoyos --- */
+  /* --- pestañas Rendimiento / Calidad / Apoyos / Bonificaciones --- */
   if(soloApoyos){
     s+='<div class="avisoapoyos">Personal activo cuya labor no es cosecha. Lo ve cualquier líder, sin importar a quién esté asignada la persona.</div>';
   } else {
+    var pestBoni=idx.meta&&idx.meta.tieneBoni;
     s+='<div class="pestanas">'+
       '<button class="pest'+(E.vista==="rend"?" pest-on":"")+'" data-vista="rend">Rendimiento</button>'+
       '<button class="pest'+(E.vista==="cal"?" pest-on":"")+'" data-vista="cal">Calidad</button>'+
+      (pestBoni?('<button class="pest'+(E.vista==="boni"?" pest-on":"")+'" data-vista="boni">Bonificaciones</button>'):"" )+
       '<button class="pest'+(E.vista==="apoyos"?" pest-on":"")+'" data-vista="apoyos">Apoyos</button></div>';
     if(esApoyos) s+='<div class="avisoapoyos">Personal activo en labores distintas a cosecha, de todos los líderes.</div>';
   }
@@ -943,6 +953,50 @@ function vistaLider(lider,comoAdmin){
 
   var conAviso=todasFilas.filter(function(f){ return f.aviso; });
   var etiqPer={dia:"del día",semana:"de la semana",mes:"del mes",anual:"del año"}[E.periodo];
+
+  /* === VISTA BONIFICACIONES === */
+  if(esBoni){
+    var semanas=Array.from(new Set(regsEquipo.map(function(r){ return r.sem; }))).sort(function(a,b){ return b-a; });
+    var semB=E.semFiltro?+E.semFiltro:(semanas.length?semanas[0]:0);
+    var regsB=regsEquipo.filter(function(r){ return r.sem===semB; });
+    var porPersonaB=new Map();
+    regsB.forEach(function(r){
+      if(!porPersonaB.has(r.p)) porPersonaB.set(r.p,{boni:0,esq:0,hor:0,n:0});
+      var a=porPersonaB.get(r.p);
+      if(r.boni>0&&a.boni===0) a.boni=r.boni;
+      a.esq+=r.esq; if(r.hor>0) a.hor+=r.hor; a.n++;
+    });
+    var filasB=equipo.filter(function(p){ return porPersonaB.has(p.i); })
+      .map(function(p){
+        var a=porPersonaB.get(p.i);
+        return { i:p.i, nom:p.nom, boni:a.boni, esq:a.esq, hor:a.hor, r:a.hor>0?a.esq/a.hor:null };
+      })
+      .sort(function(a,b){ return b.boni-a.boni; });
+    var sinBoni=filasB.filter(function(f){ return f.boni===0; });
+    var conBoni=filasB.filter(function(f){ return f.boni>0; });
+    var totalB=conBoni.reduce(function(s,f){ return s+f.boni; },0);
+    var optSemB='<option value="">— Selecciona semana —</option>'+semanas.slice(0,60).map(function(x){
+      return '<option value="'+x+'"'+(x===semB?" selected":"")+'>'+x+'</option>';
+    }).join("");
+    s+='<div class="barrafiltros"><div class="grupo">'+
+      '<label class="lblmini" for="fsem">Semana</label>'+
+      '<select id="fsem" class="inp inp-mini">'+optSemB+'</select></div></div>';
+    s+='<div class="metasbarra">Semana <b>'+semB+'</b> · '+fInt(conBoni.length)+' personas con bonificación · total equipo <b>$'+nfInt.format(totalB)+'</b></div>';
+    s+='<section class="tarj"><h3 class="tarjtit">Bonificación por persona · semana '+semB+'</h3>'+
+      '<div class="tablabox"><table class="tabla"><thead><tr>'+
+      '<th>Nombre</th><th class="num">Bonificación</th><th class="num">Esquejes</th><th class="num">esq/h</th></tr></thead><tbody>'+
+      conBoni.map(function(f){
+        return '<tr><td><button class="link-persona" data-persona="'+f.i+'">'+esc(corto(f.nom))+'</button></td>'+
+          '<td class="num fuerte">$'+nfInt.format(f.boni)+'</td>'+
+          '<td class="num">'+fInt(f.esq)+'</td><td class="num">'+fInt(f.r)+'</td></tr>';
+      }).join("")+
+      (sinBoni.length?('<tr><td colspan="4" class="mini" style="color:var(--muted);padding-top:10px">'+
+        fInt(sinBoni.length)+' sin bonificación esta semana: '+
+        sinBoni.map(function(f){ return esc(corto(f.nom)); }).join(" · ")+'</td></tr>'):"") +
+      '</tbody></table></div></section>';
+    return s+"</div>";
+  }
+  /* === FIN BONIFICACIONES === */
   var grupos=[["todos","Todos",todasFilas.length],["ambas","Cumplen las dos",cuenta.ambas],
     ["solo_r","Solo rendimiento",cuenta.solo_r],["solo_c","Solo calidad",cuenta.solo_c],
     ["ninguna","Ninguna de las dos",cuenta.ninguna]];
@@ -1439,8 +1493,7 @@ function vistaAdmin(){
       }
       var horasSinEsq=idx.regs.filter(function(r){ return r.hor>0&&r.esq<=0; }).length;
       if(horasSinEsq) al.push(fInt(horasSinEsq)+" registros con horas y cero esquejes: sí cuentan y bajan el promedio. Revisa si faltó digitar los esquejes.");
-      var atip=idx.regs.filter(function(r){ return r.r!=null&&(r.r>3000||r.r<100); }).length;
-      if(atip) al.push(fInt(atip)+" registros con rendimiento atípico (bajo 100 o sobre 3.000 esq/h).");
+      // rendimientos atípicos: se quitó el aviso, pueden ocurrir normalmente
       var fuera=idx.lideres.filter(function(l){
         if(tieneUsuario(l)) return false;
         var pp=idx.equipos.get(l)||[];

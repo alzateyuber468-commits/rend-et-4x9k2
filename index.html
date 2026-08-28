@@ -236,7 +236,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 22:15"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-08-27 22:35"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -879,7 +879,6 @@ function vistaLider(lider,comoAdmin){
   var optPer='<option value="">'+(esApoyos?"Ver todos los apoyos":"Ver todo el equipo")+'</option>'+equipo.map(function(p){
     return '<option value="'+p.i+'">'+esc(p.nom)+'</option>';
   }).join("");
-  if(esBoni) s='<div class="pantalla">'+htmlCab(titulo,sub,botones); // reset: la vista boni tiene su propia UI
   if(!esBoni) s+='<div class="barrafiltros"><div class="grupo">'+chips+'</div><div class="grupo">'+
     '<label class="lblmini" for="fdia">Día</label><select id="fdia" class="inp inp-mini">'+optDias+'</select>'+
     '<label class="lblmini" for="fsem">Semana</label><select id="fsem" class="inp inp-mini">'+optSem+'</select>'+
@@ -962,6 +961,13 @@ function vistaLider(lider,comoAdmin){
 
   /* === VISTA BONIFICACIONES === */
   if(esBoni){
+    var pestBoni2=idx.meta&&idx.meta.tieneBoni;
+    /* incluir las pestañas para poder volver */
+    s+='<div class="pestanas">'+
+      '<button class="pest" data-vista="rend">Rendimiento</button>'+
+      '<button class="pest" data-vista="cal">Calidad</button>'+
+      (pestBoni2?'<button class="pest pest-on" data-vista="boni">Bonificaciones</button>':"")+
+      '<button class="pest" data-vista="apoyos">Apoyos</button></div>';
     var semanas=Array.from(new Set(regsEquipo.map(function(r){ return r.sem; }))).sort(function(a,b){ return b-a; });
     var semB=E.semFiltro?+E.semFiltro:(semanas.length?semanas[0]:0);
     var regsB=regsEquipo.filter(function(r){ return r.sem===semB; });
@@ -1008,9 +1014,6 @@ function vistaLider(lider,comoAdmin){
         fInt(sinBoni.length)+' sin bonificación'+(!qBoni?" esta semana":"")+': '+
         sinBoni.map(function(f){ return esc(corto(f.nom)); }).join(" · ")+'</td></tr>'):"") +
       '</tbody></table></div></section>';
-    if(comoAdmin){
-      s+='<div class="boni-volver"><button class="btn btn-sec" id="volveradmin">← Volver al panel</button></div>';
-    }
     return s+"</div>";
   }
   /* === FIN BONIFICACIONES === */

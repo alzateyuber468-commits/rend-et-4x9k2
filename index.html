@@ -236,7 +236,7 @@ var PINES = {
   "__ADMIN__": "2026"
 };
 var LABOR_COSECHA = "COSECHA"; // se muestra toda labor que contenga esta palabra
-var VERSION_TABLERO = "2026-08-27 23:10"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
+var VERSION_TABLERO = "2026-10-15 directivos"; // se cambia cada vez que se genera el archivo, para detectar caché vieja
 var META_REND_DEF = 1600;   // esquejes por hora
 var META_CAL_DEF = 0.92;    // conformidad
 var DIAS_DORMIDO_DEF = 28;  // sin cosechar: se muestra aparte
@@ -259,11 +259,16 @@ function pinAdmin(){
   var p=(E.ds&&E.ds.meta)?E.ds.meta.pinAdmin:null;
   return p?String(p):PINES.__ADMIN__;
 }
+/* Directivos (directores, gerentes): ven todo el panel general, pero no cargan ni editan nada. */
+function listaDirectivos(){
+  var d=(E.ds&&E.ds.meta&&Array.isArray(E.ds.meta.directivos))?E.ds.meta.directivos:null;
+  return d||[];
+}
 function tieneUsuario(lider){
   return listaUsuarios().some(function(u){ return u.lider===lider; });
 }
 function pinLibre(){
-  var usados=listaUsuarios().map(function(u){ return +u.pin; });
+  var usados=listaUsuarios().concat(listaDirectivos()).map(function(u){ return +u.pin; });
   var n=1001;
   while(usados.indexOf(n)>=0||String(n)===pinAdmin()) n++;
   return String(n);
@@ -273,6 +278,7 @@ function asegurarUsuarios(){
     E.ds.meta.usuarios=listaUsuarios().map(function(u){ return { lider:u.lider, pin:String(u.pin) }; });
   }
   if(!E.ds.meta.pinAdmin) E.ds.meta.pinAdmin=PINES.__ADMIN__;
+  if(!Array.isArray(E.ds.meta.directivos)) E.ds.meta.directivos=[];
 }
 
 function metaRend(){ var m=E.ds&&E.ds.meta?E.ds.meta.metaRend:null; return (m&&m>0)?m:META_REND_DEF; }
@@ -410,7 +416,7 @@ function fusionar(dsBase,dsNuevo){
 
 /* Metas, usuarios y ajustes no viven en las filas del Excel: hay que
    trasladarlos a mano cada vez que se reconstruye la base. */
-var CLAVES_CONFIG=["metaRend","metaCal","diasDormido","usuarios","pinAdmin"];
+var CLAVES_CONFIG=["metaRend","metaCal","diasDormido","usuarios","pinAdmin","directivos"];
 function heredarConfig(dsNuevo,dsViejo){
   if(!dsNuevo||!dsNuevo.meta) return dsNuevo;
   var vieja=(dsViejo&&dsViejo.meta)?dsViejo.meta:{};
@@ -776,6 +782,8 @@ function vistaLogin(){
   var opts='<option value="">Selecciona…</option>';
   listaUsuarios().slice().sort(function(a,b){ return a.lider.localeCompare(b.lider,"es"); })
     .forEach(function(u){ opts+='<option value="'+esc(u.lider)+'">'+esc(u.lider)+'</option>'; });
+  listaDirectivos().slice().sort(function(a,b){ return a.nombre.localeCompare(b.nombre,"es"); })
+    .forEach(function(d){ opts+='<option value="DIR::'+esc(d.nombre)+'">'+esc(d.nombre)+' · directivo</option>'; });
   opts+='<option value="__APOYOS__">APOYOS · sin contraseña</option>';
   opts+='<option value="__ADMIN__">YUBER · administrador</option>';
   var meta=E.ds?E.ds.meta:null;
@@ -1420,14 +1428,18 @@ function vistaAdmin(){
   var idx=E.idx;
   var sub=idx?(fInt(idx.meta.registros)+" registros · "+fInt(idx.personas.length)+" personas · semanas "+
     idx.semOrd[idx.semOrd.length-1]+"–"+idx.semOrd[0]+" · "+almacen.modo):"Sin datos cargados";
-  var s='<div class="pantalla">'+htmlCab("Panel de administración · Yuber",sub,
+  var esDir=!!(E.sesion&&E.sesion.tipo==="directivo");
+  if(esDir&&E.pestana!=="general"&&E.pestana!=="lider") E.pestana="general";
+  var tabsAdm=esDir?[["general","Vista general"],["lider","Ver como líder"]]
+    :[["datos","Cargar y validar datos"],["general","Vista general"],["usuarios","Usuarios y PIN"],["lider","Ver como líder"]];
+  var s='<div class="pantalla">'+htmlCab(esDir?("Panel directivo · "+E.sesion.nombre):"Panel de administración · Yuber",sub,
     '<button class="btn btn-sec" id="salir">Salir</button>')+
     '<div class="barrafiltros"><div class="grupo">'+
-    [["datos","Cargar y validar datos"],["general","Vista general"],["usuarios","Usuarios y PIN"],["lider","Ver como líder"]].map(function(x){
+    tabsAdm.map(function(x){
       return '<button class="chip'+(E.pestana===x[0]?" chip-on":"")+'" data-pestana="'+x[0]+'">'+x[1]+'</button>';
     }).join("")+'</div></div>';
 
-  if(E.pestana==="datos"){
+  if(E.pestana==="datos"&&!esDir){
     s+='<section class="tarj"><h3 class="tarjtit">Actualizar la base'+
       '<span class="tarjsub">pega la semana en curso, fusiona, descarga datos.json y súbelo al sitio</span></h3>'+
       '<div class="cargas"><div>'+
@@ -1675,7 +1687,7 @@ function vistaAdmin(){
         :'<div class="vacio">Sin resultados.</div>')+'</section>';
   }
 
-  if(E.pestana==="usuarios"){
+  if(E.pestana==="usuarios"&&!esDir){
     if(!idx) return s+'<div class="vacio">Carga primero los datos.</div></div>';
     var us=listaUsuarios();
     var pinPorLider={};
@@ -1702,11 +1714,26 @@ function vistaAdmin(){
         '</td></tr>';
     });
 
+    var filasD="";
+    listaDirectivos().slice().sort(function(a,b){ return a.nombre.localeCompare(b.nombre,"es"); }).forEach(function(d,i){
+      filasD+='<tr><td>'+esc(d.nombre)+'</td>'+
+        '<td><input class="inp inp-mini inp-pin" id="pind_'+i+'" type="text" inputmode="numeric" maxlength="6" value="'+esc(String(d.pin))+'"></td>'+
+        '<td><button class="btn btn-mini" data-guardarpindir="'+i+'" data-dir="'+esc(d.nombre)+'">Guardar PIN</button> '+
+        '<button class="btn btn-mini" data-quitardir="'+esc(d.nombre)+'">Quitar</button></td></tr>';
+    });
+    filasD=filasD?('<div class="tablabox"><table class="tabla"><thead><tr><th>Nombre</th><th>PIN</th><th>Acción</th></tr></thead><tbody>'+filasD+'</tbody></table></div>')
+      :'<div class="vacio">Aún no hay directivos creados.</div>';
     s+='<section class="tarj"><h3 class="tarjtit">Usuarios de los líderes'+
       '<span class="tarjsub">se guardan dentro de datos.json y viajan al sitio en la próxima subida</span></h3>'+
       '<div class="tablabox"><table class="tabla"><thead><tr><th>Líder</th><th class="num">En cosecha</th>'+
       '<th class="num">Otra labor</th><th>PIN</th><th>Acción</th></tr></thead><tbody>'+filasU+
       '</tbody></table></div></section>'+
+      '<section class="tarj"><h3 class="tarjtit">Directivos y gerentes'+
+      '<span class="tarjsub">solo consultan: ven la vista general y los tableros de los líderes, no cargan ni cambian datos</span></h3>'+
+      filasD+
+      '<div class="metas"><label class="lblmini" for="nuevodir">Nuevo</label>'+
+      '<input class="inp inp-mini inp-per" id="nuevodir" type="text" placeholder="Nombre del directivo o gerente">'+
+      '<button class="btn btn-mini" id="creardir">Crear (PIN '+pinLibre()+')</button></div></section>'+
       '<section class="tarj"><h3 class="tarjtit">Tu PIN de administrador'+
       '<span class="tarjsub">si lo cambias y lo olvidas hay que volver a subir el index.html</span></h3>'+
       '<div class="metas"><label class="lblmini" for="pinadmin">PIN</label>'+
@@ -1732,7 +1759,7 @@ function render(){
   var root=document.getElementById("root");
   if(!E.sesion) root.innerHTML=vistaLogin();
   else if(E.idx&&E.mostrar!=null) root.innerHTML=vistaCosechador(E.idx.personas[E.mostrar]);
-  else if(E.sesion.tipo==="admin"&&!E.verComo) root.innerHTML=vistaAdmin();
+  else if((E.sesion.tipo==="admin"||E.sesion.tipo==="directivo")&&!E.verComo) root.innerHTML=vistaAdmin();
   else if(E.sesion.tipo==="apoyos") root.innerHTML=vistaLider("__APOYOS__",false);
   else root.innerHTML=vistaLider(E.verComo||E.sesion.lider,!!E.verComo);
   conectar();
@@ -1772,12 +1799,18 @@ function conectar(){
     var err=document.getElementById("loginerr");
     if(!u){ err.innerHTML='<div class="err">Elige tu usuario.</div>'; return; }
     if(u==="__APOYOS__"){ E.sesion={tipo:"apoyos"}; E.vista="apoyos"; E.personaSel=null; E.dRef=null; render(); return; }
+    var esDir=u.indexOf("DIR::")===0, nomDir=esDir?u.slice(5):"";
     var esperado=(u==="__ADMIN__")?pinAdmin():null;
+    if(esperado===null&&esDir){
+      listaDirectivos().forEach(function(x){ if(x.nombre===nomDir) esperado=String(x.pin); });
+    }
     if(esperado===null){
       listaUsuarios().forEach(function(x){ if(x.lider===u) esperado=String(x.pin); });
     }
     if(!esperado||p!==esperado){ err.innerHTML='<div class="err">PIN incorrecto.</div>'; return; }
-    E.sesion=(u==="__ADMIN__")?{tipo:"admin"}:{tipo:"lider",lider:u};
+    if(u==="__ADMIN__") E.sesion={tipo:"admin"};
+    else if(esDir){ E.sesion={tipo:"directivo",nombre:nomDir}; E.pestana="general"; E.verComo=""; }
+    else E.sesion={tipo:"lider",lider:u};
     render();
   });
   on("p","keydown",function(e){ if(e.key==="Enter"){ var b=document.getElementById("entrar"); if(b) b.click(); } });
@@ -1852,6 +1885,8 @@ function conectar(){
       if(val===pinAdmin()){ alert("Ese PIN es el del administrador. Usa otro."); return; }
       var choque=listaUsuarios().filter(function(u){ return u.lider!==lider&&String(u.pin)===val; });
       if(choque.length){ alert("Ese PIN ya lo tiene "+choque[0].lider+"."); return; }
+      var choqueD=listaDirectivos().filter(function(d){ return String(d.pin)===val; });
+      if(choqueD.length){ alert("Ese PIN ya lo tiene "+choqueD[0].nombre+"."); return; }
       asegurarUsuarios();
       E.ds.meta.usuarios.forEach(function(u){ if(u.lider===lider) u.pin=val; });
       guardar(E.ds);
@@ -1867,6 +1902,45 @@ function conectar(){
       E.ds.meta.usuarios.push({ lider:lider, pin:pin });
       guardar(E.ds);
       E.mensaje={tipo:"ok",txt:"Usuario creado para "+lider+" con PIN "+pin+". Puedes cambiarlo en la tabla. Recuerda subir datos.json."};
+      render();
+    });
+  });
+  on("creardir","click",function(){
+    var nom=String(document.getElementById("nuevodir").value||"").trim().replace(/\s+/g," ");
+    if(nom.length<3){ alert("Escribe el nombre del directivo o gerente."); return; }
+    asegurarUsuarios();
+    if(E.ds.meta.directivos.some(function(d){ return norm(d.nombre)===norm(nom); })){ alert("Ya existe un directivo con ese nombre."); return; }
+    var pin=pinLibre();
+    E.ds.meta.directivos.push({ nombre:nom, pin:pin });
+    guardar(E.ds);
+    E.mensaje={tipo:"ok",txt:"Directivo creado: "+nom+" con PIN "+pin+". Puedes cambiarlo en la tabla. Recuerda subir datos.json."};
+    render();
+  });
+  document.querySelectorAll("[data-guardarpindir]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var i=b.getAttribute("data-guardarpindir"), nom=b.getAttribute("data-dir");
+      var val=String(document.getElementById("pind_"+i).value||"").trim();
+      if(!/^\d{4,6}$/.test(val)){ alert("El PIN debe tener entre 4 y 6 dígitos."); return; }
+      if(val===pinAdmin()){ alert("Ese PIN es el del administrador. Usa otro."); return; }
+      var ch=listaUsuarios().filter(function(u){ return String(u.pin)===val; });
+      if(ch.length){ alert("Ese PIN ya lo tiene "+ch[0].lider+"."); return; }
+      var chD=listaDirectivos().filter(function(d){ return d.nombre!==nom&&String(d.pin)===val; });
+      if(chD.length){ alert("Ese PIN ya lo tiene "+chD[0].nombre+"."); return; }
+      asegurarUsuarios();
+      E.ds.meta.directivos.forEach(function(d){ if(d.nombre===nom) d.pin=val; });
+      guardar(E.ds);
+      E.mensaje={tipo:"ok",txt:"PIN de "+nom+" cambiado a "+val+". Descarga datos.json y súbelo para que aplique."};
+      render();
+    });
+  });
+  document.querySelectorAll("[data-quitardir]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var nom=b.getAttribute("data-quitardir");
+      if(!confirm("¿Quitar el usuario de "+nom+"? No podrá entrar al tablero.")) return;
+      asegurarUsuarios();
+      E.ds.meta.directivos=E.ds.meta.directivos.filter(function(d){ return d.nombre!==nom; });
+      guardar(E.ds);
+      E.mensaje={tipo:"ok",txt:"Directivo "+nom+" eliminado. Recuerda subir datos.json."};
       render();
     });
   });
@@ -1915,7 +1989,7 @@ function conectar(){
   on("guardarpinadmin","click",function(){
     var val=String(document.getElementById("pinadmin").value||"").trim();
     if(!/^\d{4,6}$/.test(val)){ alert("El PIN debe tener entre 4 y 6 dígitos."); return; }
-    if(listaUsuarios().some(function(u){ return String(u.pin)===val; })){ alert("Ese PIN ya lo tiene un líder."); return; }
+    if(listaUsuarios().concat(listaDirectivos()).some(function(u){ return String(u.pin)===val; })){ alert("Ese PIN ya lo tiene otro usuario."); return; }
     asegurarUsuarios();
     E.ds.meta.pinAdmin=val;
     guardar(E.ds);
